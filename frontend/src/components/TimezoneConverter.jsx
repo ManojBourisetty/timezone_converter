@@ -145,8 +145,10 @@ const TimezoneConverter = () => {
     return timezone || { city: 'Select timezone', country: '', offset: '' };
   };
 
-  const TimezoneSelectContent = ({ value, onValueChange, placeholder, label }) => {
+  const TimezoneSelectContent = ({ value, onValueChange, placeholder, label, dropdownId }) => {
     const selectedInfo = getSelectedTimezoneInfo(value);
+    const isOpen = dropdownId === 'source' ? sourceDropdownOpen : targetDropdownOpen;
+    const setOpen = dropdownId === 'source' ? setSourceDropdownOpen : setTargetDropdownOpen;
     
     return (
       <div className="space-y-3">
@@ -154,7 +156,16 @@ const TimezoneConverter = () => {
           <MapPin className="h-4 w-4 text-blue-600" />
           {label}
         </Label>
-        <Select value={value} onValueChange={onValueChange}>
+        <Select 
+          value={value} 
+          onValueChange={(newValue) => {
+            onValueChange(newValue);
+            setOpen(false);
+            setTimezoneSearchTerm('');
+          }}
+          open={isOpen}
+          onOpenChange={setOpen}
+        >
           <SelectTrigger className="h-16 border-2 border-slate-200 hover:border-blue-400 focus:border-blue-500 transition-all duration-200 bg-gradient-to-r from-white to-slate-50 shadow-md hover:shadow-lg rounded-xl">
             <div className="flex items-center justify-between w-full">
               <div className="flex flex-col items-start">
@@ -174,14 +185,19 @@ const TimezoneConverter = () => {
               </div>
             </div>
           </SelectTrigger>
-          <SelectContent className="max-h-[450px] w-full">
+          <SelectContent className="max-h-[450px] w-full z-50">
             <div className="sticky top-0 p-3 bg-white border-b border-slate-200 z-10">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                 <Input
                   placeholder="Search cities or countries..."
                   value={timezoneSearchTerm}
-                  onChange={(e) => setTimezoneSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setTimezoneSearchTerm(e.target.value);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
                   className="pl-10 h-10 border-slate-200 focus:border-blue-500 rounded-lg"
                 />
               </div>

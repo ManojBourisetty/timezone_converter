@@ -294,11 +294,16 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Health Check Endpoint"
-    - "Timezones List Endpoint"
-    - "Major Cities Time Endpoint"
-    - "Timezone Conversion Endpoint"
-    - "CORS Headers Configuration"
+    - "Timezone Dropdown Selection"
+    - "Timezone Search Functionality"
+    - "Current Time Toggle Switch"
+    - "Custom Date/Time Picker"
+    - "Convert Time Button"
+    - "Swap Timezones Functionality"
+    - "Real-time UTC Display"
+    - "Major Cities Real-time Clocks"
+    - "Responsive Design"
+    - "UI Components Rendering"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"

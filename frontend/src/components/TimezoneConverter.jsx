@@ -324,6 +324,9 @@ const TimezoneConverter = () => {
                   const temp = sourceTimezone;
                   setSourceTimezone(targetTimezone);
                   setTargetTimezone(temp);
+                  setTimezoneSearchTerm('');
+                  setSourceDropdownOpen(false);
+                  setTargetDropdownOpen(false);
                 }}
                 variant="outline"
                 className="px-6 py-2 rounded-lg bg-white border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"

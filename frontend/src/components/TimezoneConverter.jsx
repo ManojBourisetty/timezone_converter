@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -7,9 +7,13 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Switch } from './ui/switch';
-import { Clock, CalendarIcon, ArrowRight, Globe } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { Clock, CalendarIcon, ArrowRight, Globe, Search, Loader2, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
-import { allTimezones, majorCities, convertTimezone, getMajorCitiesTime } from '../data/mock';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const TimezoneConverter = () => {
   const [sourceTimezone, setSourceTimezone] = useState('America/New_York');
@@ -19,35 +23,109 @@ const TimezoneConverter = () => {
   const [customTime, setCustomTime] = useState('12:00');
   const [convertedResult, setConvertedResult] = useState(null);
   const [majorCitiesData, setMajorCitiesData] = useState([]);
+  const [allTimezones, setAllTimezones] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [timezoneSearchTerm, setTimezoneSearchTerm] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Update current time every second
   useEffect(() => {
-    // Update major cities time every second
-    const updateMajorCities = () => {
-      setMajorCitiesData(getMajorCitiesTime());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
+
+  // Load timezones on component mount
+  useEffect(() => {
+    fetchTimezones();
+  }, []);
+
+  // Update major cities time every 10 seconds
+  useEffect(() => {
+    const fetchMajorCities = async () => {
+      try {
+        const response = await axios.get(`${API}/major-cities-time`);
+        setMajorCitiesData(response.data.cities);
+      } catch (error) {
+        console.error('Error fetching major cities time:', error);
+      }
     };
     
-    updateMajorCities();
-    const interval = setInterval(updateMajorCities, 1000);
+    fetchMajorCities();
+    const interval = setInterval(fetchMajorCities, 10000);
     
     return () => clearInterval(interval);
   }, []);
 
-  const handleConvert = () => {
-    let dateToConvert;
-    
-    if (useCurrentTime) {
-      dateToConvert = new Date();
-    } else {
-      const [hours, minutes] = customTime.split(':');
-      dateToConvert = new Date(customDate);
-      dateToConvert.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+  const fetchTimezones = async () => {
+    try {
+      const response = await axios.get(`${API}/timezones`);
+      setAllTimezones(response.data);
+    } catch (error) {
+      console.error('Error fetching timezones:', error);
+      // Fallback to basic list if API fails
+      setAllTimezones([
+        { value: 'America/New_York', label: 'New York (EST) - United States', city: 'New York', country: 'United States' },
+        { value: 'Europe/London', label: 'London (GMT) - United Kingdom', city: 'London', country: 'United Kingdom' },
+        { value: 'Asia/Tokyo', label: 'Tokyo (JST) - Japan', city: 'Tokyo', country: 'Japan' },
+      ]);
     }
-    
-    const result = convertTimezone(dateToConvert, sourceTimezone, targetTimezone);
-    setConvertedResult(result);
   };
 
-  const formatDateTime = (date) => {
+  // Filter timezones based on search term
+  const filteredTimezones = useMemo(() => {
+    if (!timezoneSearchTerm) return allTimezones;
+    
+    const searchLower = timezoneSearchTerm.toLowerCase();
+    return allTimezones.filter(tz => 
+      tz.city.toLowerCase().includes(searchLower) ||
+      tz.country.toLowerCase().includes(searchLower) ||
+      tz.label.toLowerCase().includes(searchLower)
+    );
+  }, [allTimezones, timezoneSearchTerm]);
+
+  // Separate major cities and others for better UX
+  const majorCities = filteredTimezones.filter(tz => 
+    ['America/New_York', 'Europe/London', 'Asia/Tokyo', 'America/Los_Angeles', 
+     'Asia/Shanghai', 'Europe/Paris', 'Australia/Sydney', 'Asia/Dubai'].includes(tz.value)
+  );
+  
+  const otherTimezones = filteredTimezones.filter(tz => 
+    !majorCities.some(major => major.value === tz.value)
+  );
+
+  const handleConvert = async () => {
+    setLoading(true);
+    try {
+      let dateToConvert;
+      
+      if (useCurrentTime) {
+        dateToConvert = new Date();
+      } else {
+        const [hours, minutes] = customTime.split(':');
+        dateToConvert = new Date(customDate);
+        dateToConvert.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      }
+      
+      const response = await axios.post(`${API}/convert-timezone`, {
+        datetime: dateToConvert.toISOString(),
+        sourceTimezone,
+        targetTimezone
+      });
+      
+      setConvertedResult(response.data);
+    } catch (error) {
+      console.error('Error converting timezone:', error);
+      // Show error to user
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
     return date.toLocaleString('en-US', {
       weekday: 'short',
       year: 'numeric',
@@ -60,6 +138,85 @@ const TimezoneConverter = () => {
     });
   };
 
+  const TimezoneSelectContent = ({ value, onValueChange, placeholder }) => (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger className="h-12 border-slate-300 hover:border-blue-400 focus:border-blue-500 transition-colors bg-white shadow-sm">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent className="max-h-[400px] w-full">
+        <div className="sticky top-0 p-2 bg-white border-b border-slate-200 z-10">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <Input
+              placeholder="Search cities or countries..."
+              value={timezoneSearchTerm}
+              onChange={(e) => setTimezoneSearchTerm(e.target.value)}
+              className="pl-10 h-9 border-slate-200 focus:border-blue-500"
+            />
+          </div>
+        </div>
+        
+        {majorCities.length > 0 && (
+          <>
+            <div className="px-3 py-2 text-xs font-semibold text-slate-500 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+              <MapPin className="h-3 w-3" />
+              MAJOR CITIES
+            </div>
+            {majorCities.map((timezone) => (
+              <SelectItem 
+                key={timezone.value} 
+                value={timezone.value}
+                className="py-3 px-4 cursor-pointer hover:bg-blue-50 focus:bg-blue-50"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium text-slate-800">{timezone.city}</span>
+                    <span className="text-xs text-slate-500">{timezone.country}</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {timezone.offset}
+                  </Badge>
+                </div>
+              </SelectItem>
+            ))}
+          </>
+        )}
+        
+        {otherTimezones.length > 0 && (
+          <>
+            <div className="px-3 py-2 text-xs font-semibold text-slate-500 bg-slate-50 border-b border-slate-200 flex items-center gap-2 mt-2">
+              <Globe className="h-3 w-3" />
+              OTHER TIMEZONES
+            </div>
+            {otherTimezones.map((timezone) => (
+              <SelectItem 
+                key={timezone.value} 
+                value={timezone.value}
+                className="py-3 px-4 cursor-pointer hover:bg-blue-50 focus:bg-blue-50"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium text-slate-800">{timezone.city}</span>
+                    <span className="text-xs text-slate-500">{timezone.country}</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {timezone.offset}
+                  </Badge>
+                </div>
+              </SelectItem>
+            ))}
+          </>
+        )}
+        
+        {filteredTimezones.length === 0 && (
+          <div className="p-4 text-center text-slate-500">
+            No timezones found matching "{timezoneSearchTerm}"
+          </div>
+        )}
+      </SelectContent>
+    </Select>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -70,12 +227,15 @@ const TimezoneConverter = () => {
             Timezone Converter
           </h1>
           <p className="text-slate-600 text-lg">
-            Convert time between any two timezones with ease
+            Convert time between any two timezones with real-time accuracy
           </p>
+          <div className="mt-4 text-sm text-slate-500">
+            Current UTC: {currentTime.toISOString().replace('T', ' ').slice(0, 19)}
+          </div>
         </div>
 
         {/* Main Converter Card */}
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+        <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-2xl text-center flex items-center justify-center gap-2">
               <Clock className="h-6 w-6 text-blue-600" />
@@ -85,94 +245,64 @@ const TimezoneConverter = () => {
           <CardContent className="space-y-6">
             {/* Timezone Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="source-timezone" className="text-sm font-medium text-slate-700">
+              <div className="space-y-3">
+                <Label htmlFor="source-timezone" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
                   From Timezone
                 </Label>
-                <Select value={sourceTimezone} onValueChange={setSourceTimezone}>
-                  <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 transition-colors">
-                    <SelectValue placeholder="Select source timezone" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <div className="px-2 py-1 text-xs font-semibold text-slate-500 border-b border-slate-200">
-                      MAJOR CITIES
-                    </div>
-                    {majorCities.map((timezone) => (
-                      <SelectItem key={timezone.value} value={timezone.value}>
-                        {timezone.label}
-                      </SelectItem>
-                    ))}
-                    <div className="px-2 py-1 text-xs font-semibold text-slate-500 border-b border-slate-200 mt-2">
-                      ALL TIMEZONES
-                    </div>
-                    {allTimezones.filter(tz => !majorCities.find(major => major.value === tz.value)).map((timezone) => (
-                      <SelectItem key={timezone.value} value={timezone.value}>
-                        {timezone.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TimezoneSelectContent 
+                  value={sourceTimezone}
+                  onValueChange={setSourceTimezone}
+                  placeholder="Select source timezone"
+                />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="target-timezone" className="text-sm font-medium text-slate-700">
+              <div className="space-y-3">
+                <Label htmlFor="target-timezone" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
                   To Timezone
                 </Label>
-                <Select value={targetTimezone} onValueChange={setTargetTimezone}>
-                  <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 transition-colors">
-                    <SelectValue placeholder="Select target timezone" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <div className="px-2 py-1 text-xs font-semibold text-slate-500 border-b border-slate-200">
-                      MAJOR CITIES
-                    </div>
-                    {majorCities.map((timezone) => (
-                      <SelectItem key={timezone.value} value={timezone.value}>
-                        {timezone.label}
-                      </SelectItem>
-                    ))}
-                    <div className="px-2 py-1 text-xs font-semibold text-slate-500 border-b border-slate-200 mt-2">
-                      ALL TIMEZONES
-                    </div>
-                    {allTimezones.filter(tz => !majorCities.find(major => major.value === tz.value)).map((timezone) => (
-                      <SelectItem key={timezone.value} value={timezone.value}>
-                        {timezone.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TimezoneSelectContent 
+                  value={targetTimezone}
+                  onValueChange={setTargetTimezone}
+                  placeholder="Select target timezone"
+                />
               </div>
             </div>
 
             {/* Time Selection Toggle */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
                 <Switch
                   id="time-mode"
                   checked={useCurrentTime}
                   onCheckedChange={setUseCurrentTime}
                 />
-                <Label htmlFor="time-mode" className="text-sm font-medium text-slate-700">
-                  Use current time
+                <Label htmlFor="time-mode" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Use current time ({currentTime.toLocaleTimeString()})
                 </Label>
               </div>
 
               {/* Custom Date/Time Picker */}
               {!useCurrentTime && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-gradient-to-br from-slate-50 to-gray-100 rounded-xl border border-slate-200 shadow-inner">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700">Select Date</Label>
+                    <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4" />
+                      Select Date
+                    </Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
-                          className="w-full justify-start text-left font-normal h-11 border-slate-200"
+                          className="w-full justify-start text-left font-normal h-12 border-slate-300 hover:border-blue-400 bg-white shadow-sm"
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {customDate ? format(customDate, 'PPP') : 'Pick a date'}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
+                      <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
                           selected={customDate}
@@ -184,7 +314,8 @@ const TimezoneConverter = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="custom-time" className="text-sm font-medium text-slate-700">
+                    <Label htmlFor="custom-time" className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
                       Select Time
                     </Label>
                     <Input
@@ -192,7 +323,7 @@ const TimezoneConverter = () => {
                       type="time"
                       value={customTime}
                       onChange={(e) => setCustomTime(e.target.value)}
-                      className="h-11 border-slate-200 focus:border-blue-500"
+                      className="h-12 border-slate-300 focus:border-blue-500 bg-white shadow-sm"
                     />
                   </div>
                 </div>
@@ -203,10 +334,20 @@ const TimezoneConverter = () => {
             <div className="text-center">
               <Button 
                 onClick={handleConvert}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                disabled={loading}
+                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
               >
-                Convert Time
-                <ArrowRight className="ml-2 h-4 w-4" />
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Converting...
+                  </>
+                ) : (
+                  <>
+                    Convert Time
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
               </Button>
             </div>
           </CardContent>
@@ -214,7 +355,7 @@ const TimezoneConverter = () => {
 
         {/* Conversion Result */}
         {convertedResult && (
-          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm animate-in slide-in-from-bottom-4 duration-300">
+          <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm animate-in slide-in-from-bottom-4 duration-500">
             <CardHeader>
               <CardTitle className="text-xl text-center text-slate-800">
                 Conversion Result
@@ -222,28 +363,36 @@ const TimezoneConverter = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl border border-blue-200 shadow-sm">
+                  <Badge className="mb-3 bg-blue-600 text-white">Source</Badge>
                   <h3 className="text-lg font-semibold text-slate-700 mb-2">
-                    {convertedResult.sourceTimezone.city}
+                    {convertedResult.sourceTime.city}
                   </h3>
-                  <p className="text-2xl font-bold text-blue-700 mb-1">
-                    {formatDateTime(convertedResult.sourceTime)}
+                  <p className="text-2xl font-bold text-blue-700 mb-2">
+                    {convertedResult.sourceTime.formatted}
                   </p>
                   <p className="text-sm text-slate-600">
-                    {convertedResult.sourceTimezone.label}
+                    {convertedResult.sourceTime.timezone}
                   </p>
+                  <Badge variant="secondary" className="mt-2">
+                    {convertedResult.sourceTime.offset}
+                  </Badge>
                 </div>
 
-                <div className="text-center p-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                <div className="text-center p-6 bg-gradient-to-br from-emerald-50 to-teal-100 rounded-xl border border-emerald-200 shadow-sm">
+                  <Badge className="mb-3 bg-emerald-600 text-white">Target</Badge>
                   <h3 className="text-lg font-semibold text-slate-700 mb-2">
-                    {convertedResult.targetTimezone.city}
+                    {convertedResult.targetTime.city}
                   </h3>
-                  <p className="text-2xl font-bold text-emerald-700 mb-1">
-                    {formatDateTime(convertedResult.targetTime)}
+                  <p className="text-2xl font-bold text-emerald-700 mb-2">
+                    {convertedResult.targetTime.formatted}
                   </p>
                   <p className="text-sm text-slate-600">
-                    {convertedResult.targetTimezone.label}
+                    {convertedResult.targetTime.timezone}
                   </p>
+                  <Badge variant="secondary" className="mt-2">
+                    {convertedResult.targetTime.offset}
+                  </Badge>
                 </div>
               </div>
             </CardContent>
@@ -251,7 +400,7 @@ const TimezoneConverter = () => {
         )}
 
         {/* Major Cities Current Time */}
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+        <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-xl text-center text-slate-800 flex items-center justify-center gap-2">
               <Globe className="h-5 w-5 text-blue-600" />
@@ -262,28 +411,30 @@ const TimezoneConverter = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {majorCitiesData.map((city) => (
                 <div 
-                  key={city.value} 
-                  className="text-center p-4 bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg border border-slate-200 hover:shadow-md transition-shadow"
+                  key={city.timezone} 
+                  className="text-center p-4 bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-105"
                 >
                   <h4 className="font-semibold text-slate-700 mb-1 text-sm">
                     {city.city}
                   </h4>
-                  <p className="text-lg font-bold text-slate-800">
-                    {city.currentTime?.toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true
-                    })}
+                  <p className="text-xl font-bold text-slate-800 mb-1">
+                    {city.formatted}
                   </p>
-                  <p className="text-xs text-slate-500">
-                    {city.currentTime?.toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric'
-                    })}
+                  <p className="text-xs text-slate-500 mb-2">
+                    {city.date}
                   </p>
+                  <Badge variant="outline" className="text-xs">
+                    {city.offset}
+                  </Badge>
                 </div>
               ))}
             </div>
+            {majorCitiesData.length === 0 && (
+              <div className="text-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-blue-600" />
+                <p className="text-slate-500">Loading real-time data...</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

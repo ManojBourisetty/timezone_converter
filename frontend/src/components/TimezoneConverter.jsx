@@ -138,84 +138,123 @@ const TimezoneConverter = () => {
     });
   };
 
-  const TimezoneSelectContent = ({ value, onValueChange, placeholder }) => (
-    <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="h-12 border-slate-300 hover:border-blue-400 focus:border-blue-500 transition-colors bg-white shadow-sm">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent className="max-h-[400px] w-full">
-        <div className="sticky top-0 p-2 bg-white border-b border-slate-200 z-10">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-            <Input
-              placeholder="Search cities or countries..."
-              value={timezoneSearchTerm}
-              onChange={(e) => setTimezoneSearchTerm(e.target.value)}
-              className="pl-10 h-9 border-slate-200 focus:border-blue-500"
-            />
-          </div>
-        </div>
-        
-        {majorCities.length > 0 && (
-          <>
-            <div className="px-3 py-2 text-xs font-semibold text-slate-500 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
-              <MapPin className="h-3 w-3" />
-              MAJOR CITIES
-            </div>
-            {majorCities.map((timezone) => (
-              <SelectItem 
-                key={timezone.value} 
-                value={timezone.value}
-                className="py-3 px-4 cursor-pointer hover:bg-blue-50 focus:bg-blue-50"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium text-slate-800">{timezone.city}</span>
-                    <span className="text-xs text-slate-500">{timezone.country}</span>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {timezone.offset}
+  const getSelectedTimezoneInfo = (timezoneValue) => {
+    const timezone = allTimezones.find(tz => tz.value === timezoneValue);
+    return timezone || { city: 'Select timezone', country: '', offset: '' };
+  };
+
+  const TimezoneSelectContent = ({ value, onValueChange, placeholder, label }) => {
+    const selectedInfo = getSelectedTimezoneInfo(value);
+    
+    return (
+      <div className="space-y-3">
+        <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-blue-600" />
+          {label}
+        </Label>
+        <Select value={value} onValueChange={onValueChange}>
+          <SelectTrigger className="h-16 border-2 border-slate-200 hover:border-blue-400 focus:border-blue-500 transition-all duration-200 bg-gradient-to-r from-white to-slate-50 shadow-md hover:shadow-lg rounded-xl">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex flex-col items-start">
+                <span className="font-semibold text-slate-800 text-lg">
+                  {selectedInfo.city}
+                </span>
+                {selectedInfo.country && (
+                  <span className="text-sm text-slate-500">{selectedInfo.country}</span>
+                )}
+              </div>
+              <div className="flex flex-col items-end">
+                {selectedInfo.offset && (
+                  <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                    {selectedInfo.offset}
                   </Badge>
-                </div>
-              </SelectItem>
-            ))}
-          </>
-        )}
-        
-        {otherTimezones.length > 0 && (
-          <>
-            <div className="px-3 py-2 text-xs font-semibold text-slate-500 bg-slate-50 border-b border-slate-200 flex items-center gap-2 mt-2">
-              <Globe className="h-3 w-3" />
-              OTHER TIMEZONES
+                )}
+              </div>
             </div>
-            {otherTimezones.map((timezone) => (
-              <SelectItem 
-                key={timezone.value} 
-                value={timezone.value}
-                className="py-3 px-4 cursor-pointer hover:bg-blue-50 focus:bg-blue-50"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium text-slate-800">{timezone.city}</span>
-                    <span className="text-xs text-slate-500">{timezone.country}</span>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {timezone.offset}
-                  </Badge>
+          </SelectTrigger>
+          <SelectContent className="max-h-[450px] w-full">
+            <div className="sticky top-0 p-3 bg-white border-b border-slate-200 z-10">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <Input
+                  placeholder="Search cities or countries..."
+                  value={timezoneSearchTerm}
+                  onChange={(e) => setTimezoneSearchTerm(e.target.value)}
+                  className="pl-10 h-10 border-slate-200 focus:border-blue-500 rounded-lg"
+                />
+              </div>
+            </div>
+            
+            {majorCities.length > 0 && (
+              <>
+                <div className="px-4 py-3 text-xs font-bold text-slate-600 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                  POPULAR CITIES
                 </div>
-              </SelectItem>
-            ))}
-          </>
-        )}
-        
-        {filteredTimezones.length === 0 && (
-          <div className="p-4 text-center text-slate-500">
-            No timezones found matching "{timezoneSearchTerm}"
-          </div>
-        )}
-      </SelectContent>
-    </Select>
-  );
+                {majorCities.map((timezone) => (
+                  <SelectItem 
+                    key={timezone.value} 
+                    value={timezone.value}
+                    className="py-4 px-4 cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 focus:bg-gradient-to-r focus:from-blue-50 focus:to-indigo-50 transition-all duration-200"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div className="flex flex-col items-start">
+                          <span className="font-semibold text-slate-800">{timezone.city}</span>
+                          <span className="text-xs text-slate-500">{timezone.country}</span>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs font-medium">
+                        {timezone.offset}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </>
+            )}
+            
+            {otherTimezones.length > 0 && (
+              <>
+                <div className="px-4 py-3 text-xs font-bold text-slate-600 bg-gradient-to-r from-slate-50 to-gray-100 border-b border-slate-200 flex items-center gap-2 mt-1">
+                  <Globe className="h-4 w-4 text-slate-600" />
+                  ALL TIMEZONES
+                </div>
+                {otherTimezones.map((timezone) => (
+                  <SelectItem 
+                    key={timezone.value} 
+                    value={timezone.value}
+                    className="py-4 px-4 cursor-pointer hover:bg-slate-50 focus:bg-slate-50 transition-all duration-200"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium text-slate-800">{timezone.city}</span>
+                          <span className="text-xs text-slate-500">{timezone.country}</span>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {timezone.offset}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </>
+            )}
+            
+            {filteredTimezones.length === 0 && (
+              <div className="p-6 text-center text-slate-500">
+                <Search className="h-8 w-8 mx-auto mb-2 text-slate-400" />
+                <div className="font-medium">No timezones found</div>
+                <div className="text-sm">Try searching for "{timezoneSearchTerm}"</div>
+              </div>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4">

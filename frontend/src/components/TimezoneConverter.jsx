@@ -25,9 +25,8 @@ const TimezoneConverter = () => {
   const [majorCitiesData, setMajorCitiesData] = useState([]);
   const [allTimezones, setAllTimezones] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [timezoneSearchTerm, setTimezoneSearchTerm] = useState('');
-  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
-  const [targetDropdownOpen, setTargetDropdownOpen] = useState(false);
+  const [sourceSearchTerm, setSourceSearchTerm] = useState('');
+  const [targetSearchTerm, setTargetSearchTerm] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Update current time every second

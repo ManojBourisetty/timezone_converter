@@ -75,27 +75,17 @@ const TimezoneConverter = () => {
     }
   };
 
-  // Filter timezones based on search term
-  const filteredTimezones = useMemo(() => {
-    if (!timezoneSearchTerm) return allTimezones;
+  // Filter timezones based on search term for each dropdown
+  const getFilteredTimezones = (searchTerm) => {
+    if (!searchTerm) return allTimezones;
     
-    const searchLower = timezoneSearchTerm.toLowerCase();
+    const searchLower = searchTerm.toLowerCase();
     return allTimezones.filter(tz => 
       tz.city.toLowerCase().includes(searchLower) ||
       tz.country.toLowerCase().includes(searchLower) ||
       tz.label.toLowerCase().includes(searchLower)
     );
-  }, [allTimezones, timezoneSearchTerm]);
-
-  // Separate major cities and others for better UX
-  const majorCities = filteredTimezones.filter(tz => 
-    ['America/New_York', 'Europe/London', 'Asia/Tokyo', 'America/Los_Angeles', 
-     'Asia/Shanghai', 'Europe/Paris', 'Australia/Sydney', 'Asia/Dubai'].includes(tz.value)
-  );
-  
-  const otherTimezones = filteredTimezones.filter(tz => 
-    !majorCities.some(major => major.value === tz.value)
-  );
+  };
 
   const handleConvert = async () => {
     setLoading(true);

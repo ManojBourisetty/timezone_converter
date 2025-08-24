@@ -1,15 +1,19 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+from models import (
+    TimezoneConversionRequest, 
+    TimezoneConversionResponse, 
+    MajorCitiesResponse,
+    TimezoneInfo
+)
+from timezone_service import TimezoneService
 from typing import List
-import uuid
-from datetime import datetime
-
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -25,32 +29,58 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# Initialize timezone service
+timezone_service = TimezoneService()
 
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
+# Existing routes
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Timezone Converter API"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
+# Timezone conversion endpoint
+@api_router.post("/convert-timezone", response_model=TimezoneConversionResponse)
+async def convert_timezone(request: TimezoneConversionRequest):
+    try:
+        result = timezone_service.convert_timezone(
+            request.datetime,
+            request.sourceTimezone,
+            request.targetTimezone
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+# Get major cities current time
+@api_router.get("/major-cities-time", response_model=MajorCitiesResponse)
+async def get_major_cities_time():
+    try:
+        cities = timezone_service.get_major_cities_time()
+        return {
+            "cities": cities,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# Get all available timezones
+@api_router.get("/timezones", response_model=List[TimezoneInfo])
+async def get_all_timezones():
+    try:
+        timezones = timezone_service.get_all_timezones()
+        return timezones
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# Health check endpoint
+@api_router.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "version": "1.0.0"
+    }
 
 # Include the router in the main app
 app.include_router(api_router)
@@ -58,7 +88,7 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

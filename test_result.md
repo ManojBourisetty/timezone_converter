@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test the timezone converter backend API endpoints"
+user_problem_statement: "Test the timezone converter frontend application thoroughly"
 
 backend:
   - task: "Health Check Endpoint"

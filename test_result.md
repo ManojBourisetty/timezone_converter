@@ -166,7 +166,125 @@ backend:
         comment: "✅ CORS headers properly configured for frontend integration. All required headers present."
 
 frontend:
-  # Frontend testing not performed as per system limitations
+  - task: "Timezone Dropdown Selection"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/TimezoneConverter.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to test timezone dropdown selection functionality for both source and target timezones"
+
+  - task: "Timezone Search Functionality"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/TimezoneConverter.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to test search functionality in timezone dropdowns for cities like tokyo, london, paris"
+
+  - task: "Current Time Toggle Switch"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/TimezoneConverter.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to test the 'Use current time' toggle switch functionality"
+
+  - task: "Custom Date/Time Picker"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/TimezoneConverter.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to test custom date/time picker when current time is disabled"
+
+  - task: "Convert Time Button"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/TimezoneConverter.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to test Convert Time button functionality and API integration"
+
+  - task: "Swap Timezones Functionality"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/TimezoneConverter.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to test swap timezones functionality"
+
+  - task: "Real-time UTC Display"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/TimezoneConverter.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to verify current UTC time display updates every second"
+
+  - task: "Major Cities Real-time Clocks"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/TimezoneConverter.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to verify major cities clocks update in real-time"
+
+  - task: "Responsive Design"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/TimezoneConverter.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to test responsive design on different screen sizes (mobile, tablet, desktop)"
+
+  - task: "UI Components Rendering"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/TimezoneConverter.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to verify all shadcn components render correctly (Select, Calendar, Switch, Button, Card)"
 
 metadata:
   created_by: "testing_agent"

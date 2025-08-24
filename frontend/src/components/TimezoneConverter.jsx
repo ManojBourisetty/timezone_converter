@@ -282,31 +282,54 @@ const TimezoneConverter = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Timezone Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <Label htmlFor="source-timezone" className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  From Timezone
-                </Label>
-                <TimezoneSelectContent 
-                  value={sourceTimezone}
-                  onValueChange={setSourceTimezone}
-                  placeholder="Select source timezone"
-                />
-              </div>
+            {/* Enhanced Timezone Selection */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <TimezoneSelectContent 
+                value={sourceTimezone}
+                onValueChange={setSourceTimezone}
+                label="From Timezone"
+              />
 
-              <div className="space-y-3">
-                <Label htmlFor="target-timezone" className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  To Timezone
-                </Label>
+              <div className="relative">
                 <TimezoneSelectContent 
                   value={targetTimezone}
                   onValueChange={setTargetTimezone}
-                  placeholder="Select target timezone"
+                  label="To Timezone"
                 />
+                
+                {/* Swap Button - positioned absolutely between the two selectors */}
+                <div className="hidden lg:block absolute left-[-20px] top-1/2 transform -translate-y-1/2 z-10">
+                  <Button
+                    onClick={() => {
+                      const temp = sourceTimezone;
+                      setSourceTimezone(targetTimezone);
+                      setTargetTimezone(temp);
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="h-10 w-10 rounded-full bg-white border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 shadow-md hover:shadow-lg transition-all duration-200"
+                  >
+                    <ArrowRight className="h-4 w-4 text-blue-600 transform rotate-0 lg:rotate-90" />
+                  </Button>
+                </div>
               </div>
+            </div>
+
+            {/* Mobile Swap Button */}
+            <div className="lg:hidden flex justify-center">
+              <Button
+                onClick={() => {
+                  const temp = sourceTimezone;
+                  setSourceTimezone(targetTimezone);
+                  setTargetTimezone(temp);
+                }}
+                variant="outline"
+                size="sm"
+                className="px-4 py-2 rounded-lg bg-white border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+              >
+                <ArrowRight className="h-4 w-4 text-blue-600 transform rotate-90" />
+                <span className="text-sm font-medium text-blue-600">Swap Timezones</span>
+              </Button>
             </div>
 
             {/* Time Selection Toggle */}

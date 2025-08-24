@@ -296,14 +296,16 @@ const TimezoneConverter = () => {
                 value={sourceTimezone}
                 onValueChange={setSourceTimezone}
                 label="From Timezone"
-                dropdownId="source"
+                searchTerm={sourceSearchTerm}
+                setSearchTerm={setSourceSearchTerm}
               />
 
               <TimezoneSelectContent 
                 value={targetTimezone}
                 onValueChange={setTargetTimezone}
                 label="To Timezone"
-                dropdownId="target"
+                searchTerm={targetSearchTerm}
+                setSearchTerm={setTargetSearchTerm}
               />
             </div>
 

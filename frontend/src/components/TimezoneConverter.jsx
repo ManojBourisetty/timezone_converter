@@ -115,20 +115,6 @@ const TimezoneConverter = () => {
     }
   };
 
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true
-    });
-  };
-
   const getSelectedTimezoneInfo = (timezoneValue) => {
     const timezone = allTimezones.find(tz => tz.value === timezoneValue);
     return timezone || { city: 'Select timezone', country: '', offset: '' };

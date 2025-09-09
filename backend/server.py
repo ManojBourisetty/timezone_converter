@@ -91,7 +91,7 @@ app.add_middleware(
     allow_origins=[
         "https://timezone-frontend.onrender.com",  # Replace with your actual frontend URL
         "http://localhost:3000",  # Keep for local development
-    ],,
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )

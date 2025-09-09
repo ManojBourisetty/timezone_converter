@@ -1,4 +1,4 @@
- 🌍 Timezone Converter
+# 🌍 Timezone Converter
 
 A modern, real-time timezone converter web application built with React and FastAPI. Convert time between any two timezones with accurate calculations and a beautiful, responsive interface.
 
@@ -19,7 +19,7 @@ A modern, real-time timezone converter web application built with React and Fast
 - **Intuitive Controls** - Easy timezone swapping, toggle switches, and clear visual feedback
 
 ### 🔧 Technical Features
-- **Backend API Integration** - Real timezone calculations using Python\'s pytz library
+- **Backend API Integration** - Real timezone calculations using Python's pytz library
 - **Real-time Data** - Major cities time updates every 10 seconds
 - **Error Handling** - Graceful error handling for API failures and invalid inputs
 - **Optimized Performance** - Efficient state management and minimal re-renders
@@ -270,7 +270,7 @@ We welcome contributions! Please follow these steps:
 
 1. **Fork the repository**
 2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
-3. **Commit your changes** (`git commit -m \'Add amazing feature\'`)
+3. **Commit your changes** (`git commit -m 'Add amazing feature'`)
 4. **Push to the branch** (`git push origin feature/amazing-feature`)
 5. **Open a Pull Request**
 
@@ -284,7 +284,8 @@ We welcome contributions! Please follow these steps:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙋\u200d♂️ Support
+## 🙋‍♂️ Support
+=======
 
 If you have any questions or need help:
 

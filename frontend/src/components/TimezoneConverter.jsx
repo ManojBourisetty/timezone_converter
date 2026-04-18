@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from './ui/select';
@@ -166,22 +166,30 @@ const TimezoneConverter = () => {
               </div>
             </div>
           </SelectTrigger>
-          <SelectContent className="max-h-[450px] w-full z-50">
-            <div className="sticky top-0 p-3 bg-white border-b border-slate-200 z-10">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+          <SelectContent className="max-h-[450px] w-full z-50" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 p-3 bg-white border-b border-slate-200 z-10" onClick={(e) => e.stopPropagation()}>
+              <div className="relative" onClick={(e) => e.stopPropagation()}>
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
                 <Input
                   placeholder="Search cities or countries..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-10 border-slate-200 focus:border-blue-500 rounded-lg"
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setSearchTerm(e.target.value);
+                  }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  className="pl-10 h-10 border-slate-200 focus:border-blue-500 rounded-lg bg-slate-50 focus:bg-white transition-colors"
+                  autoFocus
                 />
               </div>
             </div>
             
             {majorCities.length > 0 && (
               <>
-                <div className="px-4 py-3 text-xs font-bold text-slate-600 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center gap-2">
+                <div className="px-4 py-3 text-xs font-bold text-slate-600 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center gap-2 sticky top-14 z-10">
                   <MapPin className="h-4 w-4 text-blue-600" />
                   POPULAR CITIES
                 </div>
@@ -190,16 +198,18 @@ const TimezoneConverter = () => {
                     key={timezone.value} 
                     value={timezone.value}
                     className="py-4 px-4 cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 focus:bg-gradient-to-r focus:from-blue-50 focus:to-indigo-50 transition-all duration-200"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <div className="flex flex-col items-start">
-                          <span className="font-semibold text-slate-800">{timezone.city}</span>
+                    <div className="flex items-center justify-between w-full gap-4">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className="font-semibold text-slate-800 truncate">{timezone.city}</span>
                           <span className="text-xs text-slate-500">{timezone.country}</span>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-xs font-medium">
+                      <Badge variant="default" className="text-xs font-medium bg-blue-600 text-white flex-shrink-0">
                         {timezone.offset}
                       </Badge>
                     </div>
@@ -210,7 +220,7 @@ const TimezoneConverter = () => {
             
             {otherTimezones.length > 0 && (
               <>
-                <div className="px-4 py-3 text-xs font-bold text-slate-600 bg-gradient-to-r from-slate-50 to-gray-100 border-b border-slate-200 flex items-center gap-2 mt-1">
+                <div className="px-4 py-3 text-xs font-bold text-slate-600 bg-gradient-to-r from-slate-50 to-gray-100 border-b border-slate-200 flex items-center gap-2 sticky top-24 z-10 mt-1">
                   <Globe className="h-4 w-4 text-slate-600" />
                   ALL TIMEZONES
                 </div>
@@ -219,16 +229,18 @@ const TimezoneConverter = () => {
                     key={timezone.value} 
                     value={timezone.value}
                     className="py-4 px-4 cursor-pointer hover:bg-slate-50 focus:bg-slate-50 transition-all duration-200"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
-                        <div className="flex flex-col items-start">
-                          <span className="font-medium text-slate-800">{timezone.city}</span>
+                    <div className="flex items-center justify-between w-full gap-4">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-2 h-2 bg-slate-400 rounded-full flex-shrink-0"></div>
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className="font-medium text-slate-800 truncate">{timezone.city}</span>
                           <span className="text-xs text-slate-500">{timezone.country}</span>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs font-medium flex-shrink-0">
                         {timezone.offset}
                       </Badge>
                     </div>

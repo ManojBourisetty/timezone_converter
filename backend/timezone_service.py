@@ -8,7 +8,16 @@ class TimezoneService:
     TIMEZONE_ALIASES = {
         'Asia/Mumbai': 'Asia/Kolkata',
         'Asia/Calcutta': 'Asia/Kolkata',
+        'Asia/Kolkatta': 'Asia/Kolkata',
+        'Mumbai': 'Asia/Kolkata',
+        'Calcutta': 'Asia/Kolkata',
+        'Kolkata': 'Asia/Kolkata',
+        'IST': 'Asia/Kolkata',
     }
+
+    # Case-insensitive lookups for aliases and valid IANA names
+    TIMEZONE_ALIASES_CI = {k.lower(): v for k, v in TIMEZONE_ALIASES.items()}
+    IANA_TIMEZONES_CI = {tz.lower(): tz for tz in pytz.all_timezones}
     
     # Major cities with country info for better display
     MAJOR_CITIES = [
@@ -80,7 +89,32 @@ class TimezoneService:
 
     def normalize_timezone(self, timezone_name: str) -> str:
         """Normalize aliases to canonical IANA timezone names."""
-        return self.TIMEZONE_ALIASES.get(timezone_name, timezone_name)
+        if not timezone_name:
+            return timezone_name
+
+        cleaned = timezone_name.strip()
+
+        # Exact alias match first
+        if cleaned in self.TIMEZONE_ALIASES:
+            return self.TIMEZONE_ALIASES[cleaned]
+
+        # Case-insensitive alias match
+        alias_match = self.TIMEZONE_ALIASES_CI.get(cleaned.lower())
+        if alias_match:
+            return alias_match
+
+        # Handle light formatting variants (e.g. "Asia/kolkata", "asia/mumbai")
+        iana_match = self.IANA_TIMEZONES_CI.get(cleaned.lower())
+        if iana_match:
+            return iana_match
+
+        # Last fallback: normalize spaces/underscores and retry (e.g. "Asia/Kolkata ")
+        compact = cleaned.replace(' ', '_')
+        iana_compact_match = self.IANA_TIMEZONES_CI.get(compact.lower())
+        if iana_compact_match:
+            return iana_compact_match
+
+        return cleaned
     
     def get_timezone_offset(self, timezone_name: str) -> str:
         """Get timezone offset in +/-HH:MM format"""

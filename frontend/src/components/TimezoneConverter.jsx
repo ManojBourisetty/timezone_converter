@@ -216,22 +216,60 @@ const TimezoneConverter = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const formatResultTime = (value, fallbackText) => {
-    if (!value) return fallbackText || '--';
-    const parsedDate = new Date(value);
-    if (!Number.isNaN(parsedDate.getTime())) {
-      return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(parsedDate);
+  const formatResultTime = (value, timezoneName, fallbackText) => {
+    const parsedDate = value ? new Date(value) : null;
+
+    if (parsedDate && !Number.isNaN(parsedDate.getTime()) && timezoneName) {
+      try {
+        return new Intl.DateTimeFormat('en-US', {
+          timeZone: timezoneName,
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        }).format(parsedDate);
+      } catch {
+        // Ignore invalid/legacy timezone labels and fall back below.
+      }
     }
-    return fallbackText || value;
+
+    if (fallbackText) {
+      const timeMatch = fallbackText.match(/(\d{1,2}:\d{2})(?::\d{2})?\s*([AP]M)/i);
+      if (timeMatch) {
+        return `${timeMatch[1]} ${timeMatch[2].toUpperCase()}`;
+      }
+      return fallbackText;
+    }
+
+    return '--';
   };
 
-  const formatResultDate = (value, fallbackText) => {
-    if (!value) return fallbackText || format(customDate, 'PPP');
-    const parsedDate = new Date(value);
-    if (!Number.isNaN(parsedDate.getTime())) {
-      return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' }).format(parsedDate);
+  const formatResultDate = (value, timezoneName, fallbackText) => {
+    const parsedDate = value ? new Date(value) : null;
+
+    if (parsedDate && !Number.isNaN(parsedDate.getTime()) && timezoneName) {
+      try {
+        return new Intl.DateTimeFormat('en-US', {
+          timeZone: timezoneName,
+          weekday: 'short',
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric',
+        }).format(parsedDate);
+      } catch {
+        // Ignore invalid/legacy timezone labels and fall back below.
+      }
     }
-    return fallbackText || format(customDate, 'PPP');
+
+    if (fallbackText) {
+      // Backend often returns: "Sat, Apr 18, 2026, 05:37:31 PM"
+      const parts = fallbackText.split(',');
+      if (parts.length >= 3) {
+        return parts.slice(0, 3).join(',').trim();
+      }
+      return fallbackText;
+    }
+
+    return format(customDate, 'PPP');
   };
 
   const performConversion = async (dateValue, timeValue) => {
@@ -416,9 +454,19 @@ const TimezoneConverter = () => {
                   <div className="text-center p-5 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl border border-blue-200 shadow-sm">
                     <Badge className="mb-3 bg-blue-600 text-white">Source</Badge>
                     <h3 className="text-lg font-semibold text-slate-700 mb-1">{convertedResult.sourceTime.city}</h3>
-                    <p className="text-sm text-slate-500 mb-3">{formatResultDate(convertedResult.sourceTime.datetime, format(customDate, 'PPP'))}</p>
+                    <p className="text-sm text-slate-500 mb-3">
+                      {formatResultDate(
+                        convertedResult.sourceTime.datetime,
+                        convertedResult.sourceTime.timezone,
+                        convertedResult.sourceTime.formatted,
+                      )}
+                    </p>
                     <p className="text-3xl font-bold text-blue-700 mb-2" data-testid="source-time-display">
-                      {formatResultTime(convertedResult.sourceTime.datetime, convertedResult.sourceTime.formatted)}
+                      {formatResultTime(
+                        convertedResult.sourceTime.datetime,
+                        convertedResult.sourceTime.timezone,
+                        convertedResult.sourceTime.formatted,
+                      )}
                     </p>
                     <p className="text-sm text-slate-600">{convertedResult.sourceTime.timezone}</p>
                     <Badge variant="secondary" className="mt-2">{convertedResult.sourceTime.offset}</Badge>
@@ -426,9 +474,19 @@ const TimezoneConverter = () => {
                   <div className="text-center p-5 bg-gradient-to-br from-emerald-50 to-teal-100 rounded-xl border border-emerald-200 shadow-sm">
                     <Badge className="mb-3 bg-emerald-600 text-white">Target</Badge>
                     <h3 className="text-lg font-semibold text-slate-700 mb-1">{convertedResult.targetTime.city}</h3>
-                    <p className="text-sm text-slate-500 mb-3">{formatResultDate(convertedResult.targetTime.datetime, format(customDate, 'PPP'))}</p>
+                    <p className="text-sm text-slate-500 mb-3">
+                      {formatResultDate(
+                        convertedResult.targetTime.datetime,
+                        convertedResult.targetTime.timezone,
+                        convertedResult.targetTime.formatted,
+                      )}
+                    </p>
                     <p className="text-3xl font-bold text-emerald-700 mb-2" data-testid="target-time-display">
-                      {formatResultTime(convertedResult.targetTime.datetime, convertedResult.targetTime.formatted)}
+                      {formatResultTime(
+                        convertedResult.targetTime.datetime,
+                        convertedResult.targetTime.timezone,
+                        convertedResult.targetTime.formatted,
+                      )}
                     </p>
                     <p className="text-sm text-slate-600">{convertedResult.targetTime.timezone}</p>
                     <Badge variant="secondary" className="mt-2">{convertedResult.targetTime.offset}</Badge>

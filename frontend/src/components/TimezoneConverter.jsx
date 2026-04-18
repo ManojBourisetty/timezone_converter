@@ -299,6 +299,14 @@ const TimezoneConverter = () => {
 
   const handleConvert = () => performConversion(customDate, customTime);
 
+  const handleResultDialogOpenChange = (open) => {
+    setIsResultDialogOpen(open);
+    // Closing the dialog should also stop live mode to prevent re-open flicker.
+    if (!open) {
+      setIsUsingCurrentTime(false);
+    }
+  };
+
   useEffect(() => {
     if (!isUsingCurrentTime || !isResultDialogOpen) return undefined;
     const intervalId = setInterval(() => {
@@ -441,7 +449,7 @@ const TimezoneConverter = () => {
         </Card>
 
         {convertedResult && (
-          <Dialog open={isResultDialogOpen} onOpenChange={setIsResultDialogOpen}>
+          <Dialog open={isResultDialogOpen} onOpenChange={handleResultDialogOpenChange}>
             <DialogContent className="max-w-2xl p-0 overflow-hidden" data-testid="conversion-result">
               <DialogHeader className="px-6 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <DialogTitle className="text-xl font-semibold">Conversion Result</DialogTitle>
@@ -497,7 +505,7 @@ const TimezoneConverter = () => {
                 <Button
                   type="button"
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8"
-                  onClick={() => setIsResultDialogOpen(false)}
+                  onClick={() => handleResultDialogOpenChange(false)}
                   data-testid="result-ok-button"
                 >
                   OK

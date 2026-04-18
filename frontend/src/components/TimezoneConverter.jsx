@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Calendar } from './ui/calendar';
@@ -27,8 +27,6 @@ const TimezoneConverter = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [sourceShowSuggestions, setSourceShowSuggestions] = useState(false);
   const [targetShowSuggestions, setTargetShowSuggestions] = useState(false);
-  const sourceRef = useRef(null);
-  const targetRef = useRef(null);
 
   // Update current time every second
   useEffect(() => {
@@ -87,11 +85,22 @@ const TimezoneConverter = () => {
   };
 
   const handleConvert = async () => {
+    if (!sourceTimezone || !targetTimezone) {
+      alert('Please select both source and target timezones');
+      return;
+    }
+    
     setLoading(true);
     try {
       const [hours, minutes] = customTime.split(':');
       const dateToConvert = new Date(customDate);
-      dateToConvert.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      dateToConvert.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+      
+      console.log('Converting:', {
+        datetime: dateToConvert.toISOString(),
+        sourceTimezone,
+        targetTimezone
+      });
       
       const response = await axios.post(`${API}/convert-timezone`, {
         datetime: dateToConvert.toISOString(),
@@ -99,9 +108,11 @@ const TimezoneConverter = () => {
         targetTimezone
       });
       
+      console.log('Conversion result:', response.data);
       setConvertedResult(response.data);
     } catch (error) {
       console.error('Error converting timezone:', error);
+      alert(`Error: ${error.response?.data?.detail || error.message || 'Failed to convert timezone'}`);
     } finally {
       setLoading(false);
     }
@@ -124,8 +135,8 @@ const TimezoneConverter = () => {
           {label}
         </Label>
         <div className="relative">
-          <div className="flex items-center gap-2 p-3 border-2 border-slate-200 rounded-lg hover:border-blue-400 focus-within:border-blue-500 bg-white transition-all">
-            <Search className="h-4 w-4 text-slate-400" />
+          <div className="flex items-center gap-2 p-3 border-2 border-slate-300 rounded-lg hover:border-blue-400 focus-within:border-blue-500 bg-white transition-all min-h-12">
+            <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
             <input
               data-testid={testId}
               type="text"
@@ -136,7 +147,9 @@ const TimezoneConverter = () => {
                 setShowSuggestions(true);
               }}
               onFocus={() => setShowSuggestions(true)}
-              className="flex-1 outline-none text-slate-800"
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              className="flex-1 outline-none text-slate-800 bg-transparent py-2 text-base placeholder-slate-500"
+              autoComplete="off"
             />
             {search && (
               <button
@@ -273,9 +286,9 @@ const TimezoneConverter = () => {
             {/* Time Selection */}
             <div className="space-y-4">
               <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Date</Label>
+                <div className="flex flex-col gap-4 mb-4">
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Select Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -298,15 +311,15 @@ const TimezoneConverter = () => {
                     </Popover>
                   </div>
 
-                  <div className="flex-1">
-                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Time</Label>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Select Time</Label>
                     <div className="flex gap-2">
                       <Input
                         data-testid="time-input"
                         type="time"
                         value={customTime}
                         onChange={(e) => setCustomTime(e.target.value)}
-                        className="flex-1 h-12 border-slate-300 focus:border-blue-500 bg-white shadow-sm"
+                        className="flex-1 h-12 border-2 border-slate-300 focus:border-blue-500 bg-white shadow-sm text-slate-800"
                       />
                       <Button
                         onClick={() => {
@@ -314,18 +327,18 @@ const TimezoneConverter = () => {
                           setCustomTime(now.toTimeString().slice(0, 5));
                           setCustomDate(now);
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12 flex-shrink-0"
                         data-testid="use-current-time-button"
-                        title="Use current time"
+                        title="Set to current date and time"
                       >
-                        <Clock className="h-4 w-4" />
+                        <Clock className="h-5 w-5" />
                       </Button>
                     </div>
                   </div>
                 </div>
                 <div className="text-sm text-slate-600 flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Current time: {currentTime.toLocaleTimeString()}
+                  Current UTC: {currentTime.toISOString().replace('T', ' ').slice(0, 19)}
                 </div>
               </div>
             </div>

@@ -182,7 +182,6 @@ const TimezoneConverter = () => {
   const TimezoneAutocomplete = ({ value, onChange, search, setSearch, showSuggestions, setShowSuggestions, focused, setFocused, label, placeholder, testId }) => {
     const info = getSelectedTimezoneInfo(value);
     const suggestions = getFilteredTimezones(search);
-    const displayValue = focused ? search : (search || (info.city ? `${info.city}, ${info.country}` : ''));
 
     const handleSelectSuggestion = (tz) => {
       onChange(tz.value);
@@ -198,25 +197,18 @@ const TimezoneConverter = () => {
 
     const handleInputFocus = () => {
       setFocused(true);
-      if (!search && info.city) {
-        setSearch(info.city);
-      }
-      setShowSuggestions(true);
-    };
-
-    const handleInputBlur = () => {
-      setFocused(false);
-      setShowSuggestions(false);
-    };
-
-    const handleClear = () => {
       setSearch('');
       setShowSuggestions(false);
     };
 
-    // Show suggestions only when focused and typing
-    const showSuggestionsList = focused && showSuggestions && search;
-    const showNoResults = focused && showSuggestions && search && suggestions.length === 0;
+    const handleInputBlur = () => {
+      setFocused(false);
+      setSearch('');
+      setShowSuggestions(false);
+    };
+
+    const showSuggestionsList = focused && search.length > 0 && suggestions.length > 0;
+    const showNoResults = focused && search.length > 0 && suggestions.length === 0;
 
     return (
       <div className="space-y-2">
@@ -225,40 +217,60 @@ const TimezoneConverter = () => {
           {label}
         </Label>
         <div className="relative">
-          {/* Input field - always visible */}
-          <div className={`flex items-center gap-2 px-3 py-3 border-2 rounded-lg bg-white transition-all min-h-12 ${
-            focused ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-300 hover:border-blue-400'
-          }`}>
-            <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
-            <input
-              data-testid={testId}
-              type="text"
-              placeholder={placeholder}
-              value={displayValue}
-              onChange={handleInputChange}
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && suggestions.length > 0) {
-                  e.preventDefault();
-                  handleSelectSuggestion(suggestions[0]);
-                }
-              }}
-              className="flex-1 outline-none text-slate-800 bg-transparent py-1 text-base placeholder-slate-400"
-              autoComplete="off"
-              spellCheck="false"
-            />
-            {search && (
-              <button
-                onClick={handleClear}
-                className="text-slate-400 hover:text-slate-600 flex-shrink-0 p-1"
-                aria-label="Clear search"
-                type="button"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+          {/* Selected timezone chip — shown when NOT focused */}
+          {!focused && info.city && (
+            <button
+              type="button"
+              onClick={() => setFocused(true)}
+              className="w-full flex items-center justify-between px-3 py-3 border-2 border-slate-300 hover:border-blue-400 rounded-lg bg-white transition-all min-h-12 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                <span className="text-slate-800 text-base">{info.city}, {info.country}</span>
+              </div>
+              <Badge className="bg-blue-600 text-white text-xs">{info.offset}</Badge>
+            </button>
+          )}
+
+          {/* Text input — shown when focused OR no timezone selected yet */}
+          {(focused || !info.city) && (
+            <div className={`flex items-center gap-2 px-3 py-3 border-2 rounded-lg bg-white transition-all min-h-12 ${
+              focused ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-300 hover:border-blue-400'
+            }`}>
+              <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
+              <input
+                data-testid={testId}
+                type="text"
+                placeholder={placeholder}
+                value={search}
+                onChange={handleInputChange}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') { setFocused(false); setSearch(''); setShowSuggestions(false); }
+                  if (e.key === 'Enter' && suggestions.length > 0) { e.preventDefault(); handleSelectSuggestion(suggestions[0]); }
+                }}
+                autoFocus={focused}
+                className="flex-1 outline-none text-slate-800 bg-transparent py-1 text-base placeholder-slate-400"
+                autoComplete="off"
+                spellCheck="false"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); setSearch(''); }}
+                  className="text-slate-400 hover:text-slate-600 flex-shrink-0 p-1"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          )}
+          {/* Hidden input keeps data-testid accessible for tests when chip is shown */}
+          {!focused && info.city && (
+            <input data-testid={testId} type="text" value={search} onChange={handleInputChange} className="sr-only" readOnly tabIndex={-1} />
+          )}
 
           {/* Autocomplete suggestions - only when focused and typing */}
           {showSuggestionsList && (

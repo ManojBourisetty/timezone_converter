@@ -1,6 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 import os
@@ -8,17 +7,19 @@ import logging
 import json
 from pathlib import Path
 from datetime import datetime, timezone
+from typing import List
+
+# Import from backend directory
+import sys
+sys.path.append(str(Path(__file__).parent / '..' / 'backend'))
+
 from models import (
-    TimezoneConversionRequest, 
-    TimezoneConversionResponse, 
+    TimezoneConversionRequest,
+    TimezoneConversionResponse,
     MajorCitiesResponse,
     TimezoneInfo
 )
 from timezone_service import TimezoneService
-from typing import List
-
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
 
 # Configure logging before anything else
 logging.basicConfig(
@@ -101,19 +102,14 @@ app.include_router(api_router)
 # Add GZIP compression middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Configure CORS - RESTRICT to specific origins for security
-allowed_origins = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
-allowed_origins = [origin.strip() for origin in allowed_origins]
-
-logger.info(f"Configuring CORS for origins: {allowed_origins}")
-
+# Configure CORS - Allow all for Vercel deployment (will be restricted later)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"],  # Will be updated with actual frontend URL
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],  # Only necessary methods
-    allow_headers=["Content-Type", "Authorization"],  # Only necessary headers
-    max_age=600,  # Cache preflight requests for 10 minutes
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    max_age=600,
 )
 
 # Request logging middleware
@@ -121,41 +117,7 @@ app.add_middleware(
 async def log_requests(request: Request, call_next):
     """Log all incoming requests"""
     start_time = datetime.now(timezone.utc)
-    
-    logger.info(f"Incoming {request.method} {request.url.path} from {request.client}")
-    
-    try:
-        response = await call_next(request)
-        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
-        logger.info(f"Response {response.status_code} completed in {duration:.2f}s")
-        return response
-    except Exception as e:
-        logger.error(f"Request failed: {str(e)}", exc_info=True)
-        raise
-
-
-# Graceful shutdown handling
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Clean up resources on shutdown"""
-    logger.info("Application shutting down...")
-    if client:
-        client.close()
-        logger.info("MongoDB connection closed")
-
-
-if __name__ == "__main__":
-    import uvicorn
-    
-    host = os.environ.get("HOST", "0.0.0.0")
-    port = int(os.environ.get("PORT", 8001))
-    debug = os.environ.get("DEBUG", "False").lower() == "true"
-    
-    logger.info(f"Starting server on {host}:{port}")
-    uvicorn.run(
-        "server:app",
-        host=host,
-        port=port,
-        reload=debug,
-        log_level="info"
-    )
+    response = await call_next(request)
+    process_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+    logger.info(f"{request.method} {request.url} - {response.status_code} - {process_time:.3f}s")
+    return response

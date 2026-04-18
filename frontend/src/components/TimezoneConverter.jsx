@@ -288,7 +288,11 @@ const TimezoneConverter = () => {
         targetTimezone,
       });
       setConvertedResult(response.data);
-      setIsResultDialogOpen(true);
+      // Only reopen dialog if we're still in live mode. If dialog was closed while
+      // conversion was in-flight, don't reopen (prevents popup bounce).
+      if (isUsingCurrentTime) {
+        setIsResultDialogOpen(true);
+      }
     } catch (error) {
       console.error('Error converting timezone:', error);
       alert(`${error.response?.data?.detail || error.message || 'Failed to convert timezone'}`);
@@ -297,7 +301,12 @@ const TimezoneConverter = () => {
     }
   };
 
-  const handleConvert = () => performConversion(customDate, customTime);
+  const handleConvert = () => {
+    // Explicitly open dialog for manual convert clicks.
+    // Live mode will only reopen if it's still active.
+    setIsResultDialogOpen(true);
+    performConversion(customDate, customTime);
+  };
 
   const handleResultDialogOpenChange = (open) => {
     setIsResultDialogOpen(open);

@@ -195,7 +195,7 @@ class TimezoneService:
                     'date': city_time.strftime('%b %d'),
                     'offset': self.get_timezone_offset(city_data['value'])
                 })
-            except Exception:
+            except (pytz.exceptions.UnknownTimeZoneError, ValueError, AttributeError):
                 # Skip invalid timezones
                 continue
         

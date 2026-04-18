@@ -5,9 +5,8 @@ import { Calendar } from './ui/calendar';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Switch } from './ui/switch';
 import { Badge } from './ui/badge';
-import { Clock, CalendarIcon, ArrowRight, Globe, Search, Loader2, MapPin, ChevronDown } from 'lucide-react';
+import { Clock, CalendarIcon, ArrowRight, Globe, Search, Loader2, MapPin, X } from 'lucide-react';
 import { format } from 'date-fns';
 import axios from 'axios';
 
@@ -17,23 +16,25 @@ const API = `${BACKEND_URL}/api`;
 const TimezoneConverter = () => {
   const [sourceTimezone, setSourceTimezone] = useState('America/New_York');
   const [targetTimezone, setTargetTimezone] = useState('Europe/London');
-  const [useCurrentTime, setUseCurrentTime] = useState(true);
   const [customDate, setCustomDate] = useState(new Date());
-  const [customTime, setCustomTime] = useState('12:00');
+  const [customTime, setCustomTime] = useState(new Date().toTimeString().slice(0, 5));
   const [convertedResult, setConvertedResult] = useState(null);
   const [majorCitiesData, setMajorCitiesData] = useState([]);
   const [allTimezones, setAllTimezones] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [sourceSearchTerm, setSourceSearchTerm] = useState('');
-  const [targetSearchTerm, setTargetSearchTerm] = useState('');
+  const [sourceSearch, setSourceSearch] = useState('');
+  const [targetSearch, setTargetSearch] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [sourceShowSuggestions, setSourceShowSuggestions] = useState(false);
+  const [targetShowSuggestions, setTargetShowSuggestions] = useState(false);
+  const sourceRef = useRef(null);
+  const targetRef = useRef(null);
 
   // Update current time every second
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
-    
     return () => clearInterval(timer);
   }, []);
 
@@ -55,7 +56,6 @@ const TimezoneConverter = () => {
     
     fetchMajorCities();
     const interval = setInterval(fetchMajorCities, 10000);
-    
     return () => clearInterval(interval);
   }, []);
 
@@ -65,39 +65,33 @@ const TimezoneConverter = () => {
       setAllTimezones(response.data);
     } catch (error) {
       console.error('Error fetching timezones:', error);
-      // Fallback to basic list if API fails
       setAllTimezones([
-        { value: 'America/New_York', label: 'New York (EST) - United States', city: 'New York', country: 'United States' },
-        { value: 'Europe/London', label: 'London (GMT) - United Kingdom', city: 'London', country: 'United Kingdom' },
-        { value: 'Asia/Tokyo', label: 'Tokyo (JST) - Japan', city: 'Tokyo', country: 'Japan' },
+        { value: 'America/New_York', label: 'New York (EST) - United States', city: 'New York', country: 'United States', offset: 'EST' },
+        { value: 'Europe/London', label: 'London (GMT) - United Kingdom', city: 'London', country: 'United Kingdom', offset: 'GMT' },
+        { value: 'Asia/Tokyo', label: 'Tokyo (JST) - Japan', city: 'Tokyo', country: 'Japan', offset: 'JST' },
       ]);
     }
   };
 
-  // Filter timezones based on search term for each dropdown
   const getFilteredTimezones = (searchTerm) => {
-    if (!searchTerm) return allTimezones;
-    
+    if (!searchTerm.trim()) return [];
     const searchLower = searchTerm.toLowerCase();
     return allTimezones.filter(tz => 
       tz.city.toLowerCase().includes(searchLower) ||
-      tz.country.toLowerCase().includes(searchLower) ||
-      tz.label.toLowerCase().includes(searchLower)
-    );
+      tz.country.toLowerCase().includes(searchLower)
+    ).slice(0, 8);
+  };
+
+  const getSelectedTimezoneInfo = (timezoneValue) => {
+    return allTimezones.find(tz => tz.value === timezoneValue) || { city: '', country: '', offset: '' };
   };
 
   const handleConvert = async () => {
     setLoading(true);
     try {
-      let dateToConvert;
-      
-      if (useCurrentTime) {
-        dateToConvert = new Date();
-      } else {
-        const [hours, minutes] = customTime.split(':');
-        dateToConvert = new Date(customDate);
-        dateToConvert.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-      }
+      const [hours, minutes] = customTime.split(':');
+      const dateToConvert = new Date(customDate);
+      dateToConvert.setHours(parseInt(hours), parseInt(minutes), 0, 0);
       
       const response = await axios.post(`${API}/convert-timezone`, {
         datetime: dateToConvert.toISOString(),
@@ -108,153 +102,98 @@ const TimezoneConverter = () => {
       setConvertedResult(response.data);
     } catch (error) {
       console.error('Error converting timezone:', error);
-      // Show error to user
     } finally {
       setLoading(false);
     }
   };
 
-  const getSelectedTimezoneInfo = (timezoneValue) => {
-    const timezone = allTimezones.find(tz => tz.value === timezoneValue);
-    return timezone || { city: 'Select timezone', country: '', offset: '' };
-  };
+  const TimezoneAutocomplete = ({ value, onChange, search, setSearch, showSuggestions, setShowSuggestions, label, placeholder, testId }) => {
+    const info = getSelectedTimezoneInfo(value);
+    const suggestions = getFilteredTimezones(search);
 
-  const TimezoneSelectContent = ({ value, onValueChange, label, searchTerm, setSearchTerm }) => {
-    const selectedInfo = getSelectedTimezoneInfo(value);
-    const filteredTimezones = getFilteredTimezones(searchTerm);
-    const [isOpen, setIsOpen] = useState(false);
-    const triggerRef = useRef(null);
-    
-    // Separate major cities and others for better UX
-    const majorCities = filteredTimezones.filter(tz => 
-      ['America/New_York', 'Europe/London', 'Asia/Tokyo', 'America/Los_Angeles', 
-       'Asia/Shanghai', 'Europe/Paris', 'Australia/Sydney', 'Asia/Dubai'].includes(tz.value)
-    );
-    
-    const otherTimezones = filteredTimezones.filter(tz => 
-      !majorCities.some(major => major.value === tz.value)
-    );
-
-    const handleSelect = (timezoneValue) => {
-      onValueChange(timezoneValue);
-      setSearchTerm('');
-      setIsOpen(false);
+    const handleSelectSuggestion = (tz) => {
+      onChange(tz.value);
+      setSearch('');
+      setShowSuggestions(false);
     };
-    
+
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-blue-600" />
           {label}
         </Label>
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              ref={triggerRef}
-              variant="outline"
-              className="w-full h-16 border-2 border-slate-200 hover:border-blue-400 focus:border-blue-500 transition-all duration-200 bg-gradient-to-r from-white to-slate-50 shadow-md hover:shadow-lg rounded-xl justify-between px-4"
-            >
-              <div className="flex flex-col items-start">
-                <span className="font-semibold text-slate-800 text-lg">
-                  {selectedInfo.city}
-                </span>
-                {selectedInfo.country && (
-                  <span className="text-sm text-slate-500">{selectedInfo.country}</span>
-                )}
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                {selectedInfo.offset && (
-                  <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-                    {selectedInfo.offset}
-                  </Badge>
-                )}
-                <ChevronDown className={`h-4 w-4 text-slate-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-              </div>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-96 p-0 z-50 bg-white" align="start">
-            <div className="p-3 border-b border-slate-200 sticky top-0 z-10 bg-white">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
-                <Input
-                  placeholder="Search cities or countries..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-10 border-slate-200 focus:border-blue-500 rounded-lg bg-slate-50 focus:bg-white transition-colors"
-                  autoFocus
-                />
-              </div>
-            </div>
-            
-            <div className="max-h-96 overflow-y-auto">
-              {majorCities.length > 0 && (
-                <>
-                  <div className="px-4 py-3 text-xs font-bold text-slate-600 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center gap-2 sticky top-0 z-10">
-                    <MapPin className="h-4 w-4 text-blue-600" />
-                    POPULAR CITIES
-                  </div>
-                  {majorCities.map((timezone) => (
-                    <button
-                      key={timezone.value}
-                      onClick={() => handleSelect(timezone.value)}
-                      className="w-full py-4 px-4 text-left hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 focus:bg-gradient-to-r focus:from-blue-50 focus:to-indigo-50 transition-all duration-200 border-b border-slate-100 last:border-b-0"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 flex-1">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                          <div className="flex flex-col items-start min-w-0">
-                            <span className="font-semibold text-slate-800 truncate">{timezone.city}</span>
-                            <span className="text-xs text-slate-500">{timezone.country}</span>
-                          </div>
-                        </div>
-                        <Badge className="bg-blue-600 text-white flex-shrink-0 text-xs">
-                          {timezone.offset}
-                        </Badge>
-                      </div>
-                    </button>
-                  ))}
-                </>
-              )}
-              
-              {otherTimezones.length > 0 && (
-                <>
-                  <div className="px-4 py-3 text-xs font-bold text-slate-600 bg-gradient-to-r from-slate-50 to-gray-100 border-b border-slate-200 flex items-center gap-2 sticky top-0 z-10">
-                    <Globe className="h-4 w-4 text-slate-600" />
-                    ALL TIMEZONES
-                  </div>
-                  {otherTimezones.map((timezone) => (
-                    <button
-                      key={timezone.value}
-                      onClick={() => handleSelect(timezone.value)}
-                      className="w-full py-4 px-4 text-left hover:bg-slate-50 focus:bg-slate-50 transition-all duration-200 border-b border-slate-100 last:border-b-0"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 flex-1">
-                          <div className="w-2 h-2 bg-slate-400 rounded-full flex-shrink-0"></div>
-                          <div className="flex flex-col items-start min-w-0">
-                            <span className="font-medium text-slate-800 truncate">{timezone.city}</span>
-                            <span className="text-xs text-slate-500">{timezone.country}</span>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-xs flex-shrink-0">
-                          {timezone.offset}
-                        </Badge>
-                      </div>
-                    </button>
-                  ))}
-                </>
-              )}
-              
-              {filteredTimezones.length === 0 && (
-                <div className="p-6 text-center text-slate-500">
-                  <Search className="h-8 w-8 mx-auto mb-2 text-slate-400" />
-                  <div className="font-medium">No timezones found</div>
-                  <div className="text-sm">Try searching for "{searchTerm}"</div>
+        <div className="relative">
+          <div className="flex items-center gap-2 p-3 border-2 border-slate-200 rounded-lg hover:border-blue-400 focus-within:border-blue-500 bg-white transition-all">
+            <Search className="h-4 w-4 text-slate-400" />
+            <input
+              data-testid={testId}
+              type="text"
+              placeholder={placeholder}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              className="flex-1 outline-none text-slate-800"
+            />
+            {search && (
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setShowSuggestions(false);
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Selected timezone display */}
+          {!search && info.city && (
+            <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-slate-800">{info.city}</p>
+                  <p className="text-sm text-slate-600">{info.country}</p>
                 </div>
-              )}
+                <Badge className="bg-blue-600 text-white">{info.offset}</Badge>
+              </div>
             </div>
-          </PopoverContent>
-        </Popover>
+          )}
+
+          {/* Autocomplete suggestions */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-40 max-h-64 overflow-y-auto">
+              <div className="py-2">
+                {suggestions.map((tz) => (
+                  <button
+                    key={tz.value}
+                    onClick={() => handleSelectSuggestion(tz)}
+                    className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-0"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-800">{tz.city}</p>
+                        <p className="text-sm text-slate-600">{tz.country}</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">{tz.offset}</Badge>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {showSuggestions && search && suggestions.length === 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-40 p-4 text-center text-slate-500">
+              No cities found for "{search}"
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -285,73 +224,67 @@ const TimezoneConverter = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Enhanced Timezone Selection */}
+            {/* Timezone Selection with Autocomplete */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <TimezoneSelectContent 
+              <TimezoneAutocomplete
                 value={sourceTimezone}
-                onValueChange={setSourceTimezone}
+                onChange={setSourceTimezone}
+                search={sourceSearch}
+                setSearch={setSourceSearch}
+                showSuggestions={sourceShowSuggestions}
+                setShowSuggestions={setSourceShowSuggestions}
                 label="From Timezone"
-                searchTerm={sourceSearchTerm}
-                setSearchTerm={setSourceSearchTerm}
+                placeholder="Type city name (e.g., New York, London)..."
+                testId="source-timezone-input"
               />
 
-              <TimezoneSelectContent 
+              <TimezoneAutocomplete
                 value={targetTimezone}
-                onValueChange={setTargetTimezone}
+                onChange={setTargetTimezone}
+                search={targetSearch}
+                setSearch={setTargetSearch}
+                showSuggestions={targetShowSuggestions}
+                setShowSuggestions={setTargetShowSuggestions}
                 label="To Timezone"
-                searchTerm={targetSearchTerm}
-                setSearchTerm={setTargetSearchTerm}
+                placeholder="Type city name (e.g., Tokyo, Paris)..."
+                testId="target-timezone-input"
               />
             </div>
 
-            {/* Swap Timezones Button - Positioned below timezone selections */}
+            {/* Swap Timezones Button */}
             <div className="flex justify-center">
               <Button
                 onClick={() => {
                   const temp = sourceTimezone;
                   setSourceTimezone(targetTimezone);
                   setTargetTimezone(temp);
-                  setSourceSearchTerm('');
-                  setTargetSearchTerm('');
+                  setSourceSearch('');
+                  setTargetSearch('');
                 }}
                 variant="outline"
                 className="px-6 py-2 rounded-lg bg-white border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+                data-testid="swap-timezones-button"
               >
                 <ArrowRight className="h-4 w-4 text-blue-600 transform rotate-90" />
                 <span className="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors">Swap Timezones</span>
               </Button>
             </div>
 
-            {/* Time Selection Toggle */}
+            {/* Time Selection */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                <Switch
-                  id="time-mode"
-                  checked={useCurrentTime}
-                  onCheckedChange={setUseCurrentTime}
-                />
-                <Label htmlFor="time-mode" className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Use current time ({currentTime.toLocaleTimeString()})
-                </Label>
-              </div>
-
-              {/* Custom Date/Time Picker */}
-              {!useCurrentTime && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-gradient-to-br from-slate-50 to-gray-100 rounded-xl border border-slate-200 shadow-inner">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                      <CalendarIcon className="h-4 w-4" />
-                      Select Date
-                    </Label>
+              <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-1">
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           className="w-full justify-start text-left font-normal h-12 border-slate-300 hover:border-blue-400 bg-white shadow-sm"
+                          data-testid="date-picker-button"
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {customDate ? format(customDate, 'PPP') : 'Pick a date'}
+                          {format(customDate, 'PPP')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -365,21 +298,36 @@ const TimezoneConverter = () => {
                     </Popover>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="custom-time" className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Select Time
-                    </Label>
-                    <Input
-                      id="custom-time"
-                      type="time"
-                      value={customTime}
-                      onChange={(e) => setCustomTime(e.target.value)}
-                      className="h-12 border-slate-300 focus:border-blue-500 bg-white shadow-sm"
-                    />
+                  <div className="flex-1">
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">Time</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        data-testid="time-input"
+                        type="time"
+                        value={customTime}
+                        onChange={(e) => setCustomTime(e.target.value)}
+                        className="flex-1 h-12 border-slate-300 focus:border-blue-500 bg-white shadow-sm"
+                      />
+                      <Button
+                        onClick={() => {
+                          const now = new Date();
+                          setCustomTime(now.toTimeString().slice(0, 5));
+                          setCustomDate(now);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12"
+                        data-testid="use-current-time-button"
+                        title="Use current time"
+                      >
+                        <Clock className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              )}
+                <div className="text-sm text-slate-600 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Current time: {currentTime.toLocaleTimeString()}
+                </div>
+              </div>
             </div>
 
             {/* Convert Button */}
@@ -388,6 +336,7 @@ const TimezoneConverter = () => {
                 onClick={handleConvert}
                 disabled={loading}
                 className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
+                data-testid="convert-button"
               >
                 {loading ? (
                   <>
@@ -407,7 +356,7 @@ const TimezoneConverter = () => {
 
         {/* Conversion Result */}
         {convertedResult && (
-          <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm animate-in slide-in-from-bottom-4 duration-500">
+          <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm animate-in slide-in-from-bottom-4 duration-500" data-testid="conversion-result">
             <CardHeader>
               <CardTitle className="text-xl text-center text-slate-800">
                 Conversion Result
@@ -420,7 +369,7 @@ const TimezoneConverter = () => {
                   <h3 className="text-lg font-semibold text-slate-700 mb-2">
                     {convertedResult.sourceTime.city}
                   </h3>
-                  <p className="text-2xl font-bold text-blue-700 mb-2">
+                  <p className="text-2xl font-bold text-blue-700 mb-2" data-testid="source-time-display">
                     {convertedResult.sourceTime.formatted}
                   </p>
                   <p className="text-sm text-slate-600">
@@ -436,7 +385,7 @@ const TimezoneConverter = () => {
                   <h3 className="text-lg font-semibold text-slate-700 mb-2">
                     {convertedResult.targetTime.city}
                   </h3>
-                  <p className="text-2xl font-bold text-emerald-700 mb-2">
+                  <p className="text-2xl font-bold text-emerald-700 mb-2" data-testid="target-time-display">
                     {convertedResult.targetTime.formatted}
                   </p>
                   <p className="text-sm text-slate-600">
@@ -463,7 +412,8 @@ const TimezoneConverter = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {majorCitiesData.map((city) => (
                 <div 
-                  key={city.timezone} 
+                  key={city.timezone}
+                  data-testid={`city-${city.city.toLowerCase()}`}
                   className="text-center p-4 bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-105"
                 >
                   <h4 className="font-semibold text-slate-700 mb-1 text-sm">

@@ -38,8 +38,6 @@ A modern, real-time timezone converter web application built with React and Fast
 - **FastAPI** - Modern, fast web framework for Python APIs
 - **pytz** - Accurate timezone calculations and conversions
 - **Pydantic** - Data validation using Python type annotations
-- **MongoDB** - NoSQL database for data persistence
-- **Motor** - Async MongoDB driver for Python
 
 ### Development
 - **Vite** - Fast build tool and development server
@@ -51,7 +49,6 @@ A modern, real-time timezone converter web application built with React and Fast
 ### Prerequisites
 - Node.js (v16 or higher)
 - Python (v3.8 or higher)
-- MongoDB (local or Atlas)
 
 ### Installation
 
@@ -70,7 +67,7 @@ A modern, real-time timezone converter web application built with React and Fast
    
    # Set up environment variables
    cp .env.example .env
-   # Edit .env with your MongoDB connection string
+   # Edit .env with your backend URL if needed
    
    # Start the backend server
    uvicorn server:app --host 0.0.0.0 --port 8001 --reload
@@ -215,8 +212,7 @@ REACT_APP_BACKEND_URL=http://localhost:8001
 
 #### Backend (.env)
 ```env
-MONGO_URL=mongodb://localhost:27017
-DB_NAME=timezone_converter
+# No environment variables required for basic functionality
 ```
 
 ### Customization
@@ -280,7 +276,11 @@ We welcome contributions! Please follow these steps:
 - Write tests for new features
 - Update documentation for API changes
 
-## 📝 License
+## � Author
+
+**ManojBourisetty**
+
+## �📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

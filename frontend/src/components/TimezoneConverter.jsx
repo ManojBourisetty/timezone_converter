@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Calendar } from './ui/calendar';
@@ -272,7 +272,7 @@ const TimezoneConverter = () => {
     return format(customDate, 'PPP');
   };
 
-  const performConversion = async (dateValue, timeValue) => {
+  const performConversion = useCallback(async (dateValue, timeValue) => {
     if (!sourceTimezone || !targetTimezone) {
       alert('Please select both source and target timezones');
       return;
@@ -299,7 +299,7 @@ const TimezoneConverter = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sourceTimezone, targetTimezone, isUsingCurrentTime]);
 
   const handleConvert = () => {
     // Explicitly open dialog for manual convert clicks.
@@ -327,7 +327,7 @@ const TimezoneConverter = () => {
       performConversion(now, nowTime);
     }, 1000);
     return () => clearInterval(intervalId);
-  }, [isUsingCurrentTime, isResultDialogOpen, sourceTimezone, targetTimezone, loading]);
+  }, [isUsingCurrentTime, isResultDialogOpen, loading, performConversion]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4">

@@ -27,6 +27,8 @@ const TimezoneConverter = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [sourceShowSuggestions, setSourceShowSuggestions] = useState(false);
   const [targetShowSuggestions, setTargetShowSuggestions] = useState(false);
+  const [sourceFocused, setSourceFocused] = useState(false);
+  const [targetFocused, setTargetFocused] = useState(false);
 
   // Update current time every second
   useEffect(() => {
@@ -118,7 +120,7 @@ const TimezoneConverter = () => {
     }
   };
 
-  const TimezoneAutocomplete = ({ value, onChange, search, setSearch, showSuggestions, setShowSuggestions, label, placeholder, testId }) => {
+  const TimezoneAutocomplete = ({ value, onChange, search, setSearch, showSuggestions, setShowSuggestions, focused, setFocused, label, placeholder, testId }) => {
     const info = getSelectedTimezoneInfo(value);
     const suggestions = getFilteredTimezones(search);
 
@@ -126,7 +128,37 @@ const TimezoneConverter = () => {
       onChange(tz.value);
       setSearch('');
       setShowSuggestions(false);
+      setFocused(false);
     };
+
+    const handleInputChange = (e) => {
+      setSearch(e.target.value);
+      setShowSuggestions(true);
+    };
+
+    const handleInputFocus = () => {
+      setFocused(true);
+      setShowSuggestions(true);
+    };
+
+    const handleInputBlur = () => {
+      setFocused(false);
+      // Hide suggestions only if no search text
+      if (!search) {
+        setShowSuggestions(false);
+      }
+    };
+
+    const handleClear = () => {
+      setSearch('');
+      setShowSuggestions(false);
+    };
+
+    // Show selected timezone info only when NOT focused and NOT typing
+    const showSelectedInfo = !focused && !search && info.city;
+    // Show suggestions only when focused and typing
+    const showSuggestionsList = focused && showSuggestions && search;
+    const showNoResults = focused && showSuggestions && search && suggestions.length === 0;
 
     return (
       <div className="space-y-2">
@@ -135,37 +167,37 @@ const TimezoneConverter = () => {
           {label}
         </Label>
         <div className="relative">
-          <div className="flex items-center gap-2 p-3 border-2 border-slate-300 rounded-lg hover:border-blue-400 focus-within:border-blue-500 bg-white transition-all min-h-12">
+          {/* Input field - always visible */}
+          <div className={`flex items-center gap-2 px-3 py-3 border-2 rounded-lg bg-white transition-all min-h-12 ${
+            focused ? 'border-blue-500 ring-2 ring-blue-200' : 'border-slate-300 hover:border-blue-400'
+          }`}>
             <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
             <input
               data-testid={testId}
               type="text"
-              placeholder={placeholder}
+              placeholder={focused ? placeholder : (showSelectedInfo ? 'Click to change...' : placeholder)}
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              className="flex-1 outline-none text-slate-800 bg-transparent py-2 text-base placeholder-slate-500"
+              onChange={handleInputChange}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              className="flex-1 outline-none text-slate-800 bg-transparent py-1 text-base placeholder-slate-400"
               autoComplete="off"
+              spellCheck="false"
             />
             {search && (
               <button
-                onClick={() => {
-                  setSearch('');
-                  setShowSuggestions(false);
-                }}
-                className="text-slate-400 hover:text-slate-600"
+                onClick={handleClear}
+                className="text-slate-400 hover:text-slate-600 flex-shrink-0 p-1"
+                aria-label="Clear search"
+                type="button"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
 
-          {/* Selected timezone display */}
-          {!search && info.city && (
+          {/* Selected timezone display - only when NOT focused */}
+          {showSelectedInfo && (
             <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center justify-between">
                 <div>
@@ -177,15 +209,16 @@ const TimezoneConverter = () => {
             </div>
           )}
 
-          {/* Autocomplete suggestions */}
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-40 max-h-64 overflow-y-auto">
-              <div className="py-2">
-                {suggestions.map((tz) => (
+          {/* Autocomplete suggestions - only when focused and typing */}
+          {showSuggestionsList && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+              <div className="py-1">
+                {suggestions.map((tz, idx) => (
                   <button
-                    key={tz.value}
+                    key={`${tz.value}-${idx}`}
                     onClick={() => handleSelectSuggestion(tz)}
-                    className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-0"
+                    className="w-full px-4 py-3 text-left hover:bg-blue-100 active:bg-blue-200 transition-colors border-b border-slate-100 last:border-0"
+                    type="button"
                   >
                     <div className="flex items-center justify-between">
                       <div>
@@ -200,9 +233,9 @@ const TimezoneConverter = () => {
             </div>
           )}
 
-          {/* Empty state */}
-          {showSuggestions && search && suggestions.length === 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-40 p-4 text-center text-slate-500">
+          {/* No results message */}
+          {showNoResults && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-4 text-center text-slate-500">
               No cities found for "{search}"
             </div>
           )}
@@ -246,6 +279,8 @@ const TimezoneConverter = () => {
                 setSearch={setSourceSearch}
                 showSuggestions={sourceShowSuggestions}
                 setShowSuggestions={setSourceShowSuggestions}
+                focused={sourceFocused}
+                setFocused={setSourceFocused}
                 label="From Timezone"
                 placeholder="Type city name (e.g., New York, London)..."
                 testId="source-timezone-input"
@@ -258,6 +293,8 @@ const TimezoneConverter = () => {
                 setSearch={setTargetSearch}
                 showSuggestions={targetShowSuggestions}
                 setShowSuggestions={setTargetShowSuggestions}
+                focused={targetFocused}
+                setFocused={setTargetFocused}
                 label="To Timezone"
                 placeholder="Type city name (e.g., Tokyo, Paris)..."
                 testId="target-timezone-input"
@@ -273,6 +310,10 @@ const TimezoneConverter = () => {
                   setTargetTimezone(temp);
                   setSourceSearch('');
                   setTargetSearch('');
+                  setSourceFocused(false);
+                  setTargetFocused(false);
+                  setSourceShowSuggestions(false);
+                  setTargetShowSuggestions(false);
                 }}
                 variant="outline"
                 className="px-6 py-2 rounded-lg bg-white border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"

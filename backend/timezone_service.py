@@ -4,6 +4,11 @@ from typing import List, Dict
 import re
 
 class TimezoneService:
+    # Handle user-friendly or legacy aliases by mapping them to valid IANA names
+    TIMEZONE_ALIASES = {
+        'Asia/Mumbai': 'Asia/Kolkata',
+        'Asia/Calcutta': 'Asia/Kolkata',
+    }
     
     # Major cities with country info for better display
     MAJOR_CITIES = [
@@ -40,13 +45,12 @@ class TimezoneService:
         'Europe/Istanbul': {'city': 'Istanbul', 'country': 'Turkey'},
         
         # Asia
-        'Asia/Mumbai': {'city': 'Mumbai', 'country': 'India'},
+        'Asia/Kolkata': {'city': 'Mumbai', 'country': 'India'},
         'Asia/Singapore': {'city': 'Singapore', 'country': 'Singapore'},
         'Asia/Hong_Kong': {'city': 'Hong Kong', 'country': 'Hong Kong'},
         'Asia/Seoul': {'city': 'Seoul', 'country': 'South Korea'},
         'Asia/Bangkok': {'city': 'Bangkok', 'country': 'Thailand'},
         'Asia/Jakarta': {'city': 'Jakarta', 'country': 'Indonesia'},
-        'Asia/Kolkata': {'city': 'Kolkata', 'country': 'India'},
         'Asia/Karachi': {'city': 'Karachi', 'country': 'Pakistan'},
         
         # Australia & Oceania
@@ -73,11 +77,16 @@ class TimezoneService:
         
         # Add additional timezones
         self.all_timezone_data.update(self.ALL_TIMEZONES)
+
+    def normalize_timezone(self, timezone_name: str) -> str:
+        """Normalize aliases to canonical IANA timezone names."""
+        return self.TIMEZONE_ALIASES.get(timezone_name, timezone_name)
     
     def get_timezone_offset(self, timezone_name: str) -> str:
         """Get timezone offset in +/-HH:MM format"""
         try:
-            tz = pytz.timezone(timezone_name)
+            normalized_name = self.normalize_timezone(timezone_name)
+            tz = pytz.timezone(normalized_name)
             # Use current time to get accurate offset (handles DST)
             dt = datetime.now(tz)
             offset = dt.strftime('%z')
@@ -93,6 +102,9 @@ class TimezoneService:
         try:
             # Parse ISO datetime
             dt = datetime.fromisoformat(iso_datetime.replace('Z', '+00:00'))
+
+            source_tz = self.normalize_timezone(source_tz)
+            target_tz = self.normalize_timezone(target_tz)
             
             # Get timezone objects
             source_timezone = pytz.timezone(source_tz)
@@ -156,8 +168,9 @@ class TimezoneService:
         return cities_time
     
     def get_all_timezones(self) -> List[Dict]:
-        """Get all available timezones with metadata"""
+        """Get all available timezones with metadata, including global IANA zones."""
         timezones = []
+        seen = set()
         
         # Add major cities first
         for city_data in self.MAJOR_CITIES:
@@ -180,6 +193,7 @@ class TimezoneService:
                 'offset': offset,
                 'country': city_info['country']
             })
+            seen.add(timezone_name)
         
         # Add other timezones
         for timezone_name, city_info in self.ALL_TIMEZONES.items():
@@ -203,5 +217,39 @@ class TimezoneService:
                 'offset': offset,
                 'country': city_info['country']
             })
+            seen.add(timezone_name)
+
+        # Add remaining common IANA timezones for global coverage
+        for timezone_name in pytz.common_timezones:
+            if timezone_name in seen:
+                continue
+
+            normalized_name = self.normalize_timezone(timezone_name)
+            parts = normalized_name.split('/')
+            region = parts[0].replace('_', ' ') if parts else 'Global'
+            city_part = parts[-1] if parts else normalized_name
+            city = city_part.replace('_', ' ')
+
+            # Skip generic or less useful names from UI list
+            if city in {'UTC', 'GMT'}:
+                continue
+
+            offset = self.get_timezone_offset(normalized_name)
+
+            try:
+                tz = pytz.timezone(normalized_name)
+                dt = datetime.now(tz)
+                abbr = dt.strftime('%Z')
+            except Exception:
+                abbr = 'UTC'
+
+            timezones.append({
+                'value': normalized_name,
+                'label': f"{city} ({abbr}) - {region}",
+                'city': city,
+                'offset': offset,
+                'country': region
+            })
+            seen.add(normalized_name)
         
         return timezones

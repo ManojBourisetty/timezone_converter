@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Badge } from './ui/badge';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Clock, CalendarIcon, ArrowRight, Globe, Search, Loader2, MapPin, X } from 'lucide-react';
 import { format } from 'date-fns';
 import axios from 'axios';
@@ -29,6 +30,8 @@ const TimezoneConverter = () => {
   const [targetShowSuggestions, setTargetShowSuggestions] = useState(false);
   const [sourceFocused, setSourceFocused] = useState(false);
   const [targetFocused, setTargetFocused] = useState(false);
+  const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
+  const [isUsingCurrentTime, setIsUsingCurrentTime] = useState(false);
 
   // Update current time every second
   useEffect(() => {
@@ -78,7 +81,9 @@ const TimezoneConverter = () => {
     const searchLower = searchTerm.toLowerCase();
     return allTimezones.filter(tz => 
       tz.city.toLowerCase().includes(searchLower) ||
-      tz.country.toLowerCase().includes(searchLower)
+      tz.country.toLowerCase().includes(searchLower) ||
+      tz.value.toLowerCase().includes(searchLower) ||
+      tz.label.toLowerCase().includes(searchLower)
     ).slice(0, 8);
   };
 
@@ -86,7 +91,38 @@ const TimezoneConverter = () => {
     return allTimezones.find(tz => tz.value === timezoneValue) || { city: '', country: '', offset: '' };
   };
 
-  const handleConvert = async () => {
+  const formatResultTime = (value, fallbackText) => {
+    if (!value) return fallbackText || '--';
+
+    const parsedDate = new Date(value);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).format(parsedDate);
+    }
+
+    return fallbackText || value;
+  };
+
+  const formatResultDate = (value, fallbackText) => {
+    if (!value) return fallbackText || format(customDate, 'PPP');
+
+    const parsedDate = new Date(value);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+      }).format(parsedDate);
+    }
+
+    return fallbackText || format(customDate, 'PPP');
+  };
+
+  const performConversion = async (dateValue, timeValue) => {
     if (!sourceTimezone || !targetTimezone) {
       alert('Please select both source and target timezones');
       return;
@@ -94,8 +130,8 @@ const TimezoneConverter = () => {
     
     setLoading(true);
     try {
-      const [hours, minutes] = customTime.split(':');
-      const dateToConvert = new Date(customDate);
+      const [hours, minutes] = timeValue.split(':');
+      const dateToConvert = new Date(dateValue);
       dateToConvert.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
       
       console.log('Converting:', {
@@ -112,6 +148,7 @@ const TimezoneConverter = () => {
       
       console.log('Conversion result:', response.data);
       setConvertedResult(response.data);
+      setIsResultDialogOpen(true);
     } catch (error) {
       console.error('Error converting timezone:', error);
       alert(`Error: ${error.response?.data?.detail || error.message || 'Failed to convert timezone'}`);
@@ -120,9 +157,32 @@ const TimezoneConverter = () => {
     }
   };
 
+  const handleConvert = async () => {
+    await performConversion(customDate, customTime);
+  };
+
+  useEffect(() => {
+    if (!isUsingCurrentTime || !isResultDialogOpen) {
+      return undefined;
+    }
+
+    const intervalId = setInterval(() => {
+      if (loading) return;
+
+      const now = new Date();
+      const nowTime = now.toTimeString().slice(0, 5);
+      setCustomDate(now);
+      setCustomTime(nowTime);
+      performConversion(now, nowTime);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isUsingCurrentTime, isResultDialogOpen, sourceTimezone, targetTimezone, loading]);
+
   const TimezoneAutocomplete = ({ value, onChange, search, setSearch, showSuggestions, setShowSuggestions, focused, setFocused, label, placeholder, testId }) => {
     const info = getSelectedTimezoneInfo(value);
     const suggestions = getFilteredTimezones(search);
+    const displayValue = focused ? search : (search || (info.city ? `${info.city}, ${info.country}` : ''));
 
     const handleSelectSuggestion = (tz) => {
       onChange(tz.value);
@@ -138,15 +198,15 @@ const TimezoneConverter = () => {
 
     const handleInputFocus = () => {
       setFocused(true);
+      if (!search && info.city) {
+        setSearch(info.city);
+      }
       setShowSuggestions(true);
     };
 
     const handleInputBlur = () => {
       setFocused(false);
-      // Hide suggestions only if no search text
-      if (!search) {
-        setShowSuggestions(false);
-      }
+      setShowSuggestions(false);
     };
 
     const handleClear = () => {
@@ -154,8 +214,6 @@ const TimezoneConverter = () => {
       setShowSuggestions(false);
     };
 
-    // Show selected timezone info only when NOT focused and NOT typing
-    const showSelectedInfo = !focused && !search && info.city;
     // Show suggestions only when focused and typing
     const showSuggestionsList = focused && showSuggestions && search;
     const showNoResults = focused && showSuggestions && search && suggestions.length === 0;
@@ -175,11 +233,17 @@ const TimezoneConverter = () => {
             <input
               data-testid={testId}
               type="text"
-              placeholder={focused ? placeholder : (showSelectedInfo ? 'Click to change...' : placeholder)}
-              value={search}
+              placeholder={placeholder}
+              value={displayValue}
               onChange={handleInputChange}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && suggestions.length > 0) {
+                  e.preventDefault();
+                  handleSelectSuggestion(suggestions[0]);
+                }
+              }}
               className="flex-1 outline-none text-slate-800 bg-transparent py-1 text-base placeholder-slate-400"
               autoComplete="off"
               spellCheck="false"
@@ -196,19 +260,6 @@ const TimezoneConverter = () => {
             )}
           </div>
 
-          {/* Selected timezone display - only when NOT focused */}
-          {showSelectedInfo && (
-            <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-slate-800">{info.city}</p>
-                  <p className="text-sm text-slate-600">{info.country}</p>
-                </div>
-                <Badge className="bg-blue-600 text-white">{info.offset}</Badge>
-              </div>
-            </div>
-          )}
-
           {/* Autocomplete suggestions - only when focused and typing */}
           {showSuggestionsList && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
@@ -216,6 +267,10 @@ const TimezoneConverter = () => {
                 {suggestions.map((tz, idx) => (
                   <button
                     key={`${tz.value}-${idx}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelectSuggestion(tz);
+                    }}
                     onClick={() => handleSelectSuggestion(tz)}
                     className="w-full px-4 py-3 text-left hover:bg-blue-100 active:bg-blue-200 transition-colors border-b border-slate-100 last:border-0"
                     type="button"
@@ -345,7 +400,11 @@ const TimezoneConverter = () => {
                         <Calendar
                           mode="single"
                           selected={customDate}
-                          onSelect={setCustomDate}
+                          onSelect={(selectedDate) => {
+                            if (!selectedDate) return;
+                            setIsUsingCurrentTime(false);
+                            setCustomDate(selectedDate);
+                          }}
                           initialFocus
                         />
                       </PopoverContent>
@@ -359,7 +418,10 @@ const TimezoneConverter = () => {
                         data-testid="time-input"
                         type="time"
                         value={customTime}
-                        onChange={(e) => setCustomTime(e.target.value)}
+                        onChange={(e) => {
+                          setIsUsingCurrentTime(false);
+                          setCustomTime(e.target.value);
+                        }}
                         className="flex-1 h-12 border-2 border-slate-300 focus:border-blue-500 bg-white shadow-sm text-slate-800"
                       />
                       <Button
@@ -367,6 +429,7 @@ const TimezoneConverter = () => {
                           const now = new Date();
                           setCustomTime(now.toTimeString().slice(0, 5));
                           setCustomDate(now);
+                          setIsUsingCurrentTime(true);
                         }}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12 flex-shrink-0"
                         data-testid="use-current-time-button"
@@ -408,50 +471,71 @@ const TimezoneConverter = () => {
           </CardContent>
         </Card>
 
-        {/* Conversion Result */}
+        {/* Conversion Result Popup */}
         {convertedResult && (
-          <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm animate-in slide-in-from-bottom-4 duration-500" data-testid="conversion-result">
-            <CardHeader>
-              <CardTitle className="text-xl text-center text-slate-800">
-                Conversion Result
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl border border-blue-200 shadow-sm">
-                  <Badge className="mb-3 bg-blue-600 text-white">Source</Badge>
-                  <h3 className="text-lg font-semibold text-slate-700 mb-2">
-                    {convertedResult.sourceTime.city}
-                  </h3>
-                  <p className="text-2xl font-bold text-blue-700 mb-2" data-testid="source-time-display">
-                    {convertedResult.sourceTime.formatted}
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    {convertedResult.sourceTime.timezone}
-                  </p>
-                  <Badge variant="secondary" className="mt-2">
-                    {convertedResult.sourceTime.offset}
-                  </Badge>
-                </div>
+          <Dialog open={isResultDialogOpen} onOpenChange={setIsResultDialogOpen}>
+            <DialogContent className="max-w-2xl p-0 overflow-hidden" data-testid="conversion-result">
+              <DialogHeader className="px-6 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                <DialogTitle className="text-xl font-semibold">Conversion Result</DialogTitle>
+                <p className="text-sm text-blue-100">
+                  {format(customDate, 'PPP')} at {customTime}{isUsingCurrentTime ? ' (Live)' : ''}
+                </p>
+              </DialogHeader>
 
-                <div className="text-center p-6 bg-gradient-to-br from-emerald-50 to-teal-100 rounded-xl border border-emerald-200 shadow-sm">
-                  <Badge className="mb-3 bg-emerald-600 text-white">Target</Badge>
-                  <h3 className="text-lg font-semibold text-slate-700 mb-2">
-                    {convertedResult.targetTime.city}
-                  </h3>
-                  <p className="text-2xl font-bold text-emerald-700 mb-2" data-testid="target-time-display">
-                    {convertedResult.targetTime.formatted}
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    {convertedResult.targetTime.timezone}
-                  </p>
-                  <Badge variant="secondary" className="mt-2">
-                    {convertedResult.targetTime.offset}
-                  </Badge>
+              <div className="px-6 py-6 bg-white">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="text-center p-5 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl border border-blue-200 shadow-sm">
+                    <Badge className="mb-3 bg-blue-600 text-white">Source</Badge>
+                    <h3 className="text-lg font-semibold text-slate-700 mb-1">
+                      {convertedResult.sourceTime.city}
+                    </h3>
+                    <p className="text-sm text-slate-500 mb-3">
+                      {formatResultDate(convertedResult.sourceTime.datetime, format(customDate, 'PPP'))}
+                    </p>
+                    <p className="text-3xl font-bold text-blue-700 mb-2" data-testid="source-time-display">
+                      {formatResultTime(convertedResult.sourceTime.datetime, convertedResult.sourceTime.formatted)}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      {convertedResult.sourceTime.timezone}
+                    </p>
+                    <Badge variant="secondary" className="mt-2">
+                      {convertedResult.sourceTime.offset}
+                    </Badge>
+                  </div>
+
+                  <div className="text-center p-5 bg-gradient-to-br from-emerald-50 to-teal-100 rounded-xl border border-emerald-200 shadow-sm">
+                    <Badge className="mb-3 bg-emerald-600 text-white">Target</Badge>
+                    <h3 className="text-lg font-semibold text-slate-700 mb-1">
+                      {convertedResult.targetTime.city}
+                    </h3>
+                    <p className="text-sm text-slate-500 mb-3">
+                      {formatResultDate(convertedResult.targetTime.datetime, format(customDate, 'PPP'))}
+                    </p>
+                    <p className="text-3xl font-bold text-emerald-700 mb-2" data-testid="target-time-display">
+                      {formatResultTime(convertedResult.targetTime.datetime, convertedResult.targetTime.formatted)}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      {convertedResult.targetTime.timezone}
+                    </p>
+                    <Badge variant="secondary" className="mt-2">
+                      {convertedResult.targetTime.offset}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+
+              <DialogFooter className="px-6 py-4 bg-slate-50 border-t border-slate-200">
+                <Button
+                  type="button"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                  onClick={() => setIsResultDialogOpen(false)}
+                  data-testid="result-ok-button"
+                >
+                  OK
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         )}
 
         {/* Major Cities Current Time */}

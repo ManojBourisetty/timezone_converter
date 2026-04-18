@@ -1,4 +1,5 @@
 {
   "buildCommand": null,
-  "outputDirectory": "build"
+  "outputDirectory": "build",
+  "alias": "timezone-converter-ui.vercel.app"
 }

@@ -7,17 +7,149 @@ import { Label } from './ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { Clock, CalendarIcon, ArrowRight, Globe, Search, Loader2, MapPin, X } from 'lucide-react';
+import { Clock, CalendarIcon, ArrowRight, Globe, Search, Loader2, MapPin, X, List } from 'lucide-react';
 import { format } from 'date-fns';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Group timezones by world region based on IANA prefix
+const REGION_ORDER = ['Americas', 'Europe', 'Asia', 'Oceania', 'Africa', 'Other'];
+
+const getRegion = (tzValue) => {
+  if (tzValue.startsWith('America/')) return 'Americas';
+  if (tzValue.startsWith('Europe/')) return 'Europe';
+  if (tzValue.startsWith('Asia/')) return 'Asia';
+  if (tzValue.startsWith('Australia/') || tzValue.startsWith('Pacific/')) return 'Oceania';
+  if (tzValue.startsWith('Africa/')) return 'Africa';
+  return 'Other';
+};
+
+const groupByRegion = (timezones) => {
+  const groups = {};
+  REGION_ORDER.forEach((r) => { groups[r] = []; });
+  timezones.forEach((tz) => {
+    const region = getRegion(tz.value);
+    groups[region].push(tz);
+  });
+  return groups;
+};
+
+// CityBrowserDialog — lets users explore all supported cities by region
+const CityBrowserDialog = ({ open, onOpenChange, allTimezones, onSelect, label }) => {
+  const [filter, setFilter] = useState('');
+
+  const filtered = filter.trim().length === 0
+    ? allTimezones
+    : allTimezones.filter((tz) => {
+        const q = filter.toLowerCase();
+        return (
+          tz.city.toLowerCase().includes(q) ||
+          (tz.country || '').toLowerCase().includes(q) ||
+          tz.value.toLowerCase().includes(q) ||
+          (tz.offset || '').toLowerCase().includes(q)
+        );
+      });
+
+  const groups = groupByRegion(filtered);
+
+  const handleSelect = (tz) => {
+    onSelect(tz.value);
+    onOpenChange(false);
+    setFilter('');
+  };
+
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) setFilter('');
+    onOpenChange(isOpen);
+  };
+
+  const totalCount = allTimezones.length;
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="px-6 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex-shrink-0">
+          <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Browse All Cities — {label}
+          </DialogTitle>
+          <p className="text-sm text-blue-100">{totalCount} cities & timezones available</p>
+        </DialogHeader>
+
+        <div className="px-6 py-4 border-b border-slate-200 flex-shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter by city, country or timezone…"
+              className="w-full pl-10 pr-10 py-2.5 border-2 border-slate-300 focus:border-blue-500 rounded-lg outline-none text-slate-800 placeholder-slate-400 text-sm"
+              autoFocus
+            />
+            {filter && (
+              <button
+                type="button"
+                onClick={() => setFilter('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+          {REGION_ORDER.map((region) => {
+            const cities = groups[region];
+            if (!cities || cities.length === 0) return null;
+            return (
+              <div key={region}>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-2">
+                  <span className="flex-1 h-px bg-slate-200" />
+                  {region} ({cities.length})
+                  <span className="flex-1 h-px bg-slate-200" />
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {cities.map((tz) => (
+                    <button
+                      key={tz.value}
+                      type="button"
+                      onClick={() => handleSelect(tz)}
+                      className="text-left px-3 py-3 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all group"
+                    >
+                      <p className="font-semibold text-slate-800 text-sm group-hover:text-blue-700">{tz.city}</p>
+                      <p className="text-xs text-slate-500 truncate">{tz.country || tz.value}</p>
+                      <Badge variant="outline" className="mt-1 text-xs">{tz.offset}</Badge>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="text-center py-12 text-slate-500">
+              <Globe className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+              <p className="font-medium">No cities match &ldquo;{filter}&rdquo;</p>
+              <p className="text-sm mt-1">Try a different city name, country, or timezone code</p>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex-shrink-0">
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // TimezoneAutocomplete MUST be at module scope — never inside another component.
 // Defining it inside causes React to unmount+remount the <input> on every keystroke
 // (parent re-render redefines the component type), losing focus and typed characters.
-const TimezoneAutocomplete = ({ value, onChange, allTimezones, label, placeholder, testId }) => {
+const TimezoneAutocomplete = ({ value, onChange, allTimezones, label, placeholder, testId, onBrowse }) => {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const inputRef = useRef(null);
@@ -66,10 +198,22 @@ const TimezoneAutocomplete = ({ value, onChange, allTimezones, label, placeholde
 
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-        <MapPin className="h-4 w-4 text-blue-600" />
-        {label}
-      </Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-blue-600" />
+          {label}
+        </Label>
+        {onBrowse && (
+          <button
+            type="button"
+            onClick={onBrowse}
+            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors"
+          >
+            <List className="h-3.5 w-3.5" />
+            Browse all cities
+          </button>
+        )}
+      </div>
       {/* Always-present hidden input so data-testid is always in DOM for tests */}
       <div ref={containerRef} className="relative" onBlur={handleContainerBlur}>
         {/*
@@ -179,6 +323,7 @@ const TimezoneConverter = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
   const [isUsingCurrentTime, setIsUsingCurrentTime] = useState(false);
+  const [browseDialog, setBrowseDialog] = useState(null); // 'source' | 'target' | null
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -359,6 +504,7 @@ const TimezoneConverter = () => {
                 label="From Timezone"
                 placeholder="Type city name (e.g., New York, London)..."
                 testId="source-timezone-input"
+                onBrowse={() => setBrowseDialog('source')}
               />
               <TimezoneAutocomplete
                 value={targetTimezone}
@@ -367,6 +513,7 @@ const TimezoneConverter = () => {
                 label="To Timezone"
                 placeholder="Type city name (e.g., Tokyo, Paris)..."
                 testId="target-timezone-input"
+                onBrowse={() => setBrowseDialog('target')}
               />
             </div>
 
@@ -554,6 +701,22 @@ const TimezoneConverter = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Browse All Cities dialogs */}
+        <CityBrowserDialog
+          open={browseDialog === 'source'}
+          onOpenChange={(open) => setBrowseDialog(open ? 'source' : null)}
+          allTimezones={allTimezones}
+          onSelect={setSourceTimezone}
+          label="From Timezone"
+        />
+        <CityBrowserDialog
+          open={browseDialog === 'target'}
+          onOpenChange={(open) => setBrowseDialog(open ? 'target' : null)}
+          allTimezones={allTimezones}
+          onSelect={setTargetTimezone}
+          label="To Timezone"
+        />
       </div>
     </div>
   );

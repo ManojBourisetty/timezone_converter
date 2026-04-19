@@ -9,9 +9,14 @@ on:
       - ".github/workflows/deploy-vercel.yml"
   workflow_dispatch:
 
+concurrency:
+  group: deploy-vercel-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     defaults:
       run:

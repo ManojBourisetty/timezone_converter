@@ -116,6 +116,28 @@ npm run build
 - If Vercel deployment fails with quota messages like
   `api-deployments-young-hobby-team-24h`, this is an account/team deployment limit, not an application build failure.
 
+### Workflow Resilience (New)
+
+The deploy workflow now includes:
+
+- Quota-aware retry logic for Vercel deploy attempts
+- Automatic scheduled re-run every 4 hours (`cron: 17 */4 * * *`) to retry after quota windows reset
+- Fallback deployment profile support (separate Vercel team/project)
+
+### Configure Fallback Deployment Profile
+
+Add these GitHub repository secrets to enable fallback target deployment:
+
+- `VERCEL_FALLBACK_TOKEN`
+- `VERCEL_FALLBACK_ORG_ID`
+- `VERCEL_FALLBACK_PROJECT_ID`
+
+Primary profile still uses:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
 ## Author
 
 ManojBourisetty

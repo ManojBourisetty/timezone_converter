@@ -324,6 +324,7 @@ const TimezoneConverter = () => {
   const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
   const [isUsingCurrentTime, setIsUsingCurrentTime] = useState(false);
   const [browseDialog, setBrowseDialog] = useState(null); // 'source' | 'target' | null
+  const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local Timezone';
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -417,6 +418,22 @@ const TimezoneConverter = () => {
     return format(customDate, 'PPP');
   };
 
+  const formatBrowserLocalDateTime = (dateValue) => {
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: '2-digit',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      }).format(dateValue);
+    } catch {
+      return dateValue.toLocaleString();
+    }
+  };
+
   const performConversion = useCallback(async (dateValue, timeValue) => {
     if (!sourceTimezone || !targetTimezone) {
       alert('Please select both source and target timezones');
@@ -487,6 +504,26 @@ const TimezoneConverter = () => {
             Current UTC: {currentTime.toISOString().replace('T', ' ').slice(0, 19)}
           </div>
         </div>
+
+        <Card className="shadow-lg border border-blue-100 bg-gradient-to-r from-blue-50 to-cyan-50">
+          <CardContent className="py-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Your Browser Local Time</p>
+                <p className="text-2xl font-bold text-blue-800" data-testid="local-browser-time">
+                  {formatBrowserLocalDateTime(currentTime)}
+                </p>
+                <p className="text-sm text-slate-600" data-testid="local-browser-timezone">
+                  Detected timezone: {browserTimezone}
+                </p>
+              </div>
+              <div className="text-sm text-slate-700 bg-white/80 rounded-lg px-4 py-3 border border-blue-100">
+                <p className="font-semibold mb-1">Quick tip</p>
+                <p>Use the browser local time above as your reference, then choose any source and target city below to compare instantly.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
           <CardHeader>
@@ -571,11 +608,38 @@ const TimezoneConverter = () => {
                       />
                       <Button
                         onClick={() => { const now = new Date(); setCustomTime(now.toTimeString().slice(0, 5)); setCustomDate(now); setIsUsingCurrentTime(true); }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12 flex-shrink-0"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12 flex-shrink-0 font-medium"
                         data-testid="use-current-time-button"
                         title="Set to current date and time"
                       >
-                        <Clock className="h-5 w-5" />
+                        <Clock className="h-5 w-5 mr-2" />
+                        Use Browser Now
+                      </Button>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 text-xs"
+                        onClick={() => { setIsUsingCurrentTime(false); setCustomTime('09:00'); }}
+                      >
+                        Morning 9:00
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 text-xs"
+                        onClick={() => { setIsUsingCurrentTime(false); setCustomTime('12:00'); }}
+                      >
+                        Noon 12:00
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 text-xs"
+                        onClick={() => { setIsUsingCurrentTime(false); setCustomTime('18:00'); }}
+                      >
+                        Evening 6:00
                       </Button>
                     </div>
                   </div>

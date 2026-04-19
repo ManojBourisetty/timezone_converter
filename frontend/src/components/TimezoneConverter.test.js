@@ -75,6 +75,15 @@ describe('TimezoneConverter Component - Unit Tests', () => {
     });
   });
 
+  test('renders browser local time panel and timezone detection', async () => {
+    render(<TimezoneConverter />);
+    await waitFor(() => {
+      expect(screen.getByText('Your Browser Local Time')).toBeInTheDocument();
+      expect(screen.getByTestId('local-browser-time')).toBeInTheDocument();
+      expect(screen.getByTestId('local-browser-timezone')).toBeInTheDocument();
+    });
+  });
+
   test('renders convert button', async () => {
     render(<TimezoneConverter />);
     expect(screen.getByTestId('convert-button')).toBeInTheDocument();
@@ -178,6 +187,20 @@ describe('TimezoneConverter Component - Unit Tests', () => {
         // Value should be set to current time (might be different)
         expect(timeInput.value).toBeTruthy();
       });
+    });
+
+    test('quick preset buttons set expected time value', async () => {
+      render(<TimezoneConverter />);
+      const timeInput = await screen.findByTestId('time-input');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Morning 9:00' }));
+      expect(timeInput.value).toBe('09:00');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Noon 12:00' }));
+      expect(timeInput.value).toBe('12:00');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Evening 6:00' }));
+      expect(timeInput.value).toBe('18:00');
     });
   });
 

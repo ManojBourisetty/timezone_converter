@@ -115,6 +115,41 @@ const buildQuickCityTimezone = (city) => {
 
 const getTimezoneKey = (tz) => tz.cityKey || `${tz.v}-${tz.l}`;
 
+const parseCityKeysFromQuery = (value) => {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map((entry) => decodeURIComponent(entry))
+    .filter(Boolean);
+};
+
+const buildTimezonesFromQuery = (offsetValue, cityKeyValue) => {
+  const selected = [];
+  const selectedKeys = new Set();
+
+  parseCityKeysFromQuery(cityKeyValue).forEach((cityKey) => {
+    const city = MAJOR_CITIES.find((item) => `${item.city}-${item.country}-${item.timezone}` === cityKey);
+    if (!city) return;
+
+    const timezone = buildQuickCityTimezone(city);
+    selected.push(timezone);
+    selectedKeys.add(getTimezoneKey(timezone));
+  });
+
+  parseOffsetsFromQuery(offsetValue).forEach((offset) => {
+    const timezone = TIMEZONE_DATA.find((tz) => tz.v === offset);
+    if (!timezone) return;
+
+    const timezoneKey = getTimezoneKey(timezone);
+    if (selectedKeys.has(timezoneKey)) return;
+
+    selected.push(timezone);
+    selectedKeys.add(timezoneKey);
+  });
+
+  return selected;
+};
+
 const formatTimezoneDisplayLabel = (date, tz) => {
   return `${getTimeZoneOffsetLabel(date, tz)} (${getTimezoneCityLabel(tz)})`;
 };
@@ -273,6 +308,7 @@ export default function TimezoneConverter() {
     const params = new URLSearchParams(window.location.search);
     const viewParam = params.get('view');
     const tzParam = params.get('tz');
+    const cityParam = params.get('tzc');
     const fromParam = params.get('from');
     const toParam = params.get('to');
     const hostParam = params.get('host');
@@ -284,11 +320,9 @@ export default function TimezoneConverter() {
       setActiveView(viewParam);
     }
 
-    const offsets = parseOffsetsFromQuery(tzParam)
-      .map((offset) => TIMEZONE_DATA.find((tz) => tz.v === offset))
-      .filter(Boolean);
-    if (offsets.length) {
-      setSelectedTimezones(offsets);
+    const selections = buildTimezonesFromQuery(tzParam, cityParam);
+    if (selections.length) {
+      setSelectedTimezones(selections);
     }
 
     if (fromParam && !Number.isNaN(Number(fromParam))) setConverterFrom(Number(fromParam));
@@ -303,7 +337,21 @@ export default function TimezoneConverter() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     params.set('view', activeView);
-    params.set('tz', selectedTimezones.map((tz) => tz.v).join(','));
+    const genericSelections = selectedTimezones.filter((tz) => !tz.cityKey).map((tz) => tz.v);
+    const citySelections = selectedTimezones.filter((tz) => tz.cityKey).map((tz) => encodeURIComponent(tz.cityKey));
+
+    if (genericSelections.length) {
+      params.set('tz', genericSelections.join(','));
+    } else {
+      params.delete('tz');
+    }
+
+    if (citySelections.length) {
+      params.set('tzc', citySelections.join(','));
+    } else {
+      params.delete('tzc');
+    }
+
     params.set('from', String(converterFrom));
     params.set('to', String(converterTo));
     params.set('host', String(meetingHostOffset));

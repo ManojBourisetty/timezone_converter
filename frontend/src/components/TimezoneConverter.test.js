@@ -245,6 +245,30 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
     expect(screen.getByRole('button', { name: /Share Setup/i })).toBeInTheDocument();
   });
 
+  test('shareable URL preserves exact city selections for same-timezone cities', async () => {
+    const { unmount } = render(<TimezoneConverter />);
+
+    fireEvent.click(screen.getByRole('button', { name: /^Boston$/i }));
+
+    await waitFor(() => {
+      expect(window.location.search).toContain('tz=-5%2C0%2C5.5');
+      expect(window.location.search).toContain('tzc=Boston-USA--5');
+    });
+
+    unmount();
+    window.history.replaceState({}, '', `/${window.location.search}`);
+
+    render(<TimezoneConverter />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/\(New York\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/\(Boston\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/\(London\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/\(New Delhi\)/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Offset:/i)).toHaveLength(4);
+    });
+  });
+
   test('shows meeting app integration buttons', async () => {
     render(<TimezoneConverter />);
     fireEvent.click(screen.getByRole('tab', { name: /Meeting Planner/i }));

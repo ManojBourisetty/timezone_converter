@@ -14,6 +14,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Best slots analyzer (cross-timezone overlap suggestions)
 - ICS calendar export from meeting planner
 - Shareable setup via URL parameters
+- Shareable setup now preserves exact city identities for quick-city selections, not just raw UTC offsets
 - Team profiles with preferred timezone + working-hour windows
 - Quick city shortcuts and favorites
 - Quick city buttons now toggle selected cities on and off directly
@@ -68,6 +69,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 
 - Planner state is mirrored in URL query params
 - Opening a link restores current planning setup
+- Shared links preserve city-specific selections like Boston and New York separately when both are chosen
 - Without a shared link, each browser session stays independent
 
 ### 7) Team Profiles
@@ -102,6 +104,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Tightened card styling, section headers, and shortcut surfaces so the interface feels more cohesive without changing the underlying workflow.
 - Fixed quick-city selection so cities like Miami and Toronto no longer implicitly resolve back to the default New York entry.
 - Refined same-timezone city behavior so selecting another city in the same offset adds a distinct card instead of replacing the existing city card.
+- Shareable links now restore exact city-based world clock selections instead of flattening them back to generic offset entries.
 
 ## User Data Scope
 

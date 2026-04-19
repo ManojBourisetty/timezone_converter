@@ -2,8 +2,8 @@ import pytest
 import sys
 from pathlib import Path
 
-# Add backend to path
-backend_path = Path(__file__).parent / 'backend'
+# Add backend to path (tests/ is a sibling of backend/ under the repo root)
+backend_path = Path(__file__).parent.parent / 'backend'
 sys.path.insert(0, str(backend_path))
 
 from timezone_service import TimezoneService

@@ -18,10 +18,12 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Quick city shortcuts and favorites
 - Quick city buttons now toggle selected cities on and off directly
 - Quick city selection keeps the chooser stable while adding multiple cities
+- Expanded quick city catalog with more North America, Europe, Asia, and Australia shortcuts
 - Meeting app launch links (Google Meet/Calendar, Microsoft Teams, Zoom)
 - Responsive cross-browser layout hardening (including iPad Safari)
 - Browser local time banner now reflects the user's real device/browser timezone
 - World clock city times are DST-aware for regional timezones like New York and London
+- Top-level navigation refined into a clearer professional tabbed tool switcher
 
 ## Feature Highlights
 
@@ -87,6 +89,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Quick city access now toggles cities off directly instead of requiring removal from world clock cards.
 - Quick city selection no longer jumps away while adding multiple cities from the shortcut grid.
 - Fixed incorrect browser-local and regional world-clock time rendering by using timezone-aware display formatting.
+- Refined page navigation for a cleaner professional tool-switching experience.
 
 ## User Data Scope
 

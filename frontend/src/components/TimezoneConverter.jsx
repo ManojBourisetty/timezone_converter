@@ -320,11 +320,11 @@ export default function TimezoneConverter() {
     setSelectedTimezones((prev) => prev.filter((t) => t.v !== offset));
   };
 
-  const preserveQuickCityPosition = (offset, previousTop) => {
+  const preserveQuickCityPosition = (buttonKey, previousTop) => {
     if (previousTop == null || typeof window === 'undefined') return;
 
     window.requestAnimationFrame(() => {
-      const button = quickCityButtonRefs.current[offset];
+      const button = quickCityButtonRefs.current[buttonKey];
       if (!button || typeof button.getBoundingClientRect !== 'function') return;
 
       const currentTop = button.getBoundingClientRect().top;
@@ -335,7 +335,7 @@ export default function TimezoneConverter() {
     });
   };
 
-  const toggleTimezoneSelection = (tz, buttonElement) => {
+  const toggleTimezoneSelection = (tz, buttonElement, buttonKey = String(tz.v)) => {
     const previousTop = buttonElement?.getBoundingClientRect?.().top ?? null;
 
     setSelectedTimezones((prev) => {
@@ -346,7 +346,7 @@ export default function TimezoneConverter() {
       return [...prev, tz];
     });
 
-    preserveQuickCityPosition(tz.v, previousTop);
+    preserveQuickCityPosition(buttonKey, previousTop);
   };
 
   // Handle favorite toggle
@@ -516,6 +516,33 @@ export default function TimezoneConverter() {
       .join('\n');
   }, [meetingRows]);
 
+  const navigationItems = [
+    {
+      key: 'world',
+      label: 'World Clock',
+      hint: 'Live city times',
+      icon: Clock,
+    },
+    {
+      key: 'converter',
+      label: 'Converter',
+      hint: 'Shift between zones',
+      icon: ArrowRight,
+    },
+    {
+      key: 'meeting',
+      label: 'Meeting Planner',
+      hint: 'Plan shared availability',
+      icon: Briefcase,
+    },
+    {
+      key: 'overlap',
+      label: 'Best Slots',
+      hint: 'Find work-hour overlap',
+      icon: Sparkles,
+    },
+  ];
+
   return (
     <div className="w-full max-w-6xl mx-auto p-3 sm:p-4 md:p-5 space-y-5 md:space-y-6 overflow-x-hidden">
       {/* HEADER */}
@@ -577,38 +604,51 @@ export default function TimezoneConverter() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-2">
-        <Button
-          variant={activeView === 'world' ? 'default' : 'outline'}
-          onClick={() => setActiveView('world')}
-          className="w-full"
-        >
-          World Clock
-        </Button>
-        <Button
-          variant={activeView === 'converter' ? 'default' : 'outline'}
-          onClick={() => setActiveView('converter')}
-          className="w-full"
-        >
-          Time Converter
-        </Button>
-        <Button
-          variant={activeView === 'meeting' ? 'default' : 'outline'}
-          onClick={() => setActiveView('meeting')}
-          className="w-full gap-2"
-        >
-          <Briefcase className="w-4 h-4" />
-          Meeting Planner
-        </Button>
-        <Button
-          variant={activeView === 'overlap' ? 'default' : 'outline'}
-          onClick={() => setActiveView('overlap')}
-          className="w-full gap-2"
-        >
-          <Sparkles className="w-4 h-4" />
-          Best Slots
-        </Button>
-      </div>
+      <Card className="border-slate-200/80 bg-white/90 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
+        <CardContent className="p-2">
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-2" role="tablist" aria-label="Timezone tools navigation">
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeView === item.key;
+
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveView(item.key)}
+                  className={[
+                    'w-full rounded-xl border px-3 py-3 text-left transition-all duration-150',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                    isActive
+                      ? 'border-slate-900 bg-slate-900 text-white shadow-md dark:border-slate-100 dark:bg-slate-100 dark:text-slate-950'
+                      : 'border-slate-200 bg-slate-50/70 text-slate-700 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
+                  ].join(' ')}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={[
+                      'mt-0.5 rounded-lg p-2',
+                      isActive ? 'bg-white/15 dark:bg-slate-900/15' : 'bg-white dark:bg-slate-800',
+                    ].join(' ')}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold leading-none">{item.label}</div>
+                      <div className={[
+                        'mt-1 text-xs',
+                        isActive ? 'text-slate-200 dark:text-slate-700' : 'text-slate-500 dark:text-slate-400',
+                      ].join(' ')}>
+                        {item.hint}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {activeView === 'world' && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -993,24 +1033,25 @@ export default function TimezoneConverter() {
           <CardTitle className="text-lg">📍 Quick City Access</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
-            {Array.from(new Set(MAJOR_CITIES.map((c) => c.timezone))).map((offset) => {
-              const city = MAJOR_CITIES.find((c) => c.timezone === offset);
-              const tz = TIMEZONE_DATA.find((t) => t.v === offset);
-              if (!city || !tz) return null;
+          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
+            {MAJOR_CITIES.map((city) => {
+              const tz = TIMEZONE_DATA.find((t) => t.v === city.timezone);
+              if (!tz) return null;
+
+              const cityKey = `${city.city}-${city.country}-${city.timezone}`;
 
               return (
                 <Button
-                  key={offset}
-                  onClick={(event) => toggleTimezoneSelection(tz, event.currentTarget)}
-                  variant={selectedTimezones.find((t) => t.v === offset) ? 'default' : 'outline'}
+                  key={cityKey}
+                  onClick={(event) => toggleTimezoneSelection(tz, event.currentTarget, cityKey)}
+                  variant={selectedTimezones.find((t) => t.v === city.timezone) ? 'default' : 'outline'}
                   size="sm"
                   className="justify-start"
                   ref={(element) => {
                     if (element) {
-                      quickCityButtonRefs.current[offset] = element;
+                      quickCityButtonRefs.current[cityKey] = element;
                     } else {
-                      delete quickCityButtonRefs.current[offset];
+                      delete quickCityButtonRefs.current[cityKey];
                     }
                   }}
                 >

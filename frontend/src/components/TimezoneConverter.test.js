@@ -89,6 +89,9 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   test('renders Quick City Access section', () => {
     render(<TimezoneConverter />);
     expect(screen.getByText(/Quick City Access/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Seoul$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^San Francisco$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Boston$/i })).toBeInTheDocument();
   });
 
   test('quick city access toggles a city on and off', async () => {
@@ -171,7 +174,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
 
   test('opens converter view and shows conversion panels', async () => {
     render(<TimezoneConverter />);
-    fireEvent.click(screen.getByRole('button', { name: /Time Converter/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Converter/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Manual Timezone Conversion/i)).toBeInTheDocument();
@@ -182,7 +185,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
 
   test('opens meeting planner and renders participant rows', async () => {
     render(<TimezoneConverter />);
-    fireEvent.click(screen.getByRole('button', { name: /Meeting Planner/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Meeting Planner/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Copy Meeting Summary/i)).toBeInTheDocument();
@@ -192,7 +195,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
 
   test('opens best slots view', async () => {
     render(<TimezoneConverter />);
-    fireEvent.click(screen.getByRole('button', { name: /Best Slots/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Best Slots/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Best Meeting Slots/i)).toBeInTheDocument();
@@ -201,7 +204,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
 
   test('shows ICS export button in meeting planner', async () => {
     render(<TimezoneConverter />);
-    fireEvent.click(screen.getByRole('button', { name: /Meeting Planner/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Meeting Planner/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Export \.ics Calendar Invite/i)).toBeInTheDocument();
@@ -210,7 +213,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
 
   test('adds a team profile member', async () => {
     render(<TimezoneConverter />);
-    fireEvent.click(screen.getByRole('button', { name: /Meeting Planner/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Meeting Planner/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /Show Advanced/i }));
 
@@ -230,7 +233,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
 
   test('shows meeting app integration buttons', async () => {
     render(<TimezoneConverter />);
-    fireEvent.click(screen.getByRole('button', { name: /Meeting Planner/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Meeting Planner/i }));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Google Meet/i })).toBeInTheDocument();

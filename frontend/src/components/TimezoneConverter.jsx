@@ -160,6 +160,9 @@ export default function TimezoneConverter() {
   const [meetingHostOffset, setMeetingHostOffset] = useState(-5);
   const [meetingStart, setMeetingStart] = useState('09:00');
   const [meetingDuration, setMeetingDuration] = useState(60);
+  const [meetingTitle, setMeetingTitle] = useState('Global Team Meeting');
+  const [meetingNotes, setMeetingNotes] = useState('');
+  const [showAdvancedPlanner, setShowAdvancedPlanner] = useState(false);
   const [teamProfiles, setTeamProfiles] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('teamProfiles')) || [];
@@ -305,8 +308,8 @@ export default function TimezoneConverter() {
     if (!meetingDate || !meetingStart) return;
     const { utcStart, utcEnd } = toUtcRange(meetingDate, meetingStart, meetingHostOffset, meetingDuration);
     const ics = buildICSContent({
-      title: 'Global Team Meeting',
-      description: meetingSummary || 'Meeting scheduled from Timezone Converter planner.',
+      title: meetingTitle || 'Global Team Meeting',
+      description: `${meetingSummary || 'Meeting scheduled from Timezone Converter planner.'}${meetingNotes ? `\n\nNotes: ${meetingNotes}` : ''}`,
       location: 'Online',
       utcStart,
       utcEnd,
@@ -327,6 +330,32 @@ export default function TimezoneConverter() {
     } else {
       copyToClipboard(ics, 'ics-export');
     }
+  };
+
+  const meetingWindow = useMemo(
+    () => toUtcRange(meetingDate, meetingStart, meetingHostOffset, meetingDuration),
+    [meetingDate, meetingDuration, meetingHostOffset, meetingStart]
+  );
+
+  const meetingIntegrationLinks = useMemo(() => {
+    const startIso = new Date(meetingWindow.utcStart).toISOString();
+    const endIso = new Date(meetingWindow.utcEnd).toISOString();
+    const details = `${meetingTitle || 'Global meeting'}${meetingNotes ? `\n\n${meetingNotes}` : ''}`;
+    const dates = `${formatICSDate(meetingWindow.utcStart)}/${formatICSDate(meetingWindow.utcEnd)}`;
+    const title = meetingTitle || 'Global Team Meeting';
+
+    return {
+      google: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${encodeURIComponent(dates)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent('Google Meet')}`,
+      teams: `https://teams.microsoft.com/l/meeting/new?subject=${encodeURIComponent(title)}&startTime=${encodeURIComponent(startIso)}&endTime=${encodeURIComponent(endIso)}&content=${encodeURIComponent(details)}`,
+      zoom: `https://zoom.us/meeting/schedule?topic=${encodeURIComponent(title)}&start_time=${encodeURIComponent(startIso)}&duration=${meetingWindow.duration}`,
+    };
+  }, [meetingNotes, meetingTitle, meetingWindow.duration, meetingWindow.utcEnd, meetingWindow.utcStart]);
+
+  const openMeetingIntegration = (url, id) => {
+    if (typeof window === 'undefined') return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
   };
 
   // Filter timezones by search
@@ -652,55 +681,15 @@ export default function TimezoneConverter() {
             <CardTitle className="text-lg">Meeting Planner</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-md border p-3 bg-slate-50/60 dark:bg-slate-900/40">
-              <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-                <p className="font-medium flex items-center gap-2"><Users className="w-4 h-4" /> Team Profiles</p>
-                <Button onClick={applyTeamTimezones} variant="outline" size="sm">
-                  Apply Team Timezones
-                </Button>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Meeting title</p>
+                <Input value={meetingTitle} onChange={(e) => setMeetingTitle(e.target.value)} placeholder="Global Team Meeting" />
               </div>
-
-              <div className="grid gap-2 md:grid-cols-5">
-                <Input
-                  placeholder="Name"
-                  value={profileName}
-                  onChange={(e) => setProfileName(e.target.value)}
-                />
-                <select
-                  value={profileTimezone}
-                  onChange={(e) => setProfileTimezone(Number(e.target.value))}
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2"
-                >
-                  {TIMEZONE_DATA.map((tz) => (
-                    <option key={`profile-${tz.v}`} value={tz.v}>{tz.l}</option>
-                  ))}
-                </select>
-                <Input type="time" value={profileWorkStart} onChange={(e) => setProfileWorkStart(e.target.value)} />
-                <Input type="time" value={profileWorkEnd} onChange={(e) => setProfileWorkEnd(e.target.value)} />
-                <Button onClick={addTeamProfile} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Member
-                </Button>
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Notes (optional)</p>
+                <Input value={meetingNotes} onChange={(e) => setMeetingNotes(e.target.value)} placeholder="Agenda / context" />
               </div>
-
-              {teamProfiles.length > 0 && (
-                <div className="mt-3 grid gap-2">
-                  {teamProfiles.map((profile) => {
-                    const tz = TIMEZONE_DATA.find((item) => item.v === profile.timezone);
-                    return (
-                      <div key={profile.id} className="rounded border p-2 flex items-center justify-between gap-2">
-                        <div className="text-sm">
-                          <span className="font-medium">{profile.name}</span>
-                          <span className="text-gray-600 dark:text-gray-400"> · {tz?.l || `UTC${profile.timezone >= 0 ? '+' : ''}${profile.timezone}`} · {profile.workStart}-{profile.workEnd}</span>
-                        </div>
-                        <Button onClick={() => removeTeamProfile(profile.id)} variant="ghost" size="sm" className="text-red-600">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
 
             <div className="grid gap-3 md:grid-cols-4">
@@ -735,6 +724,102 @@ export default function TimezoneConverter() {
                   onChange={(e) => setMeetingDuration(Number(e.target.value))}
                 />
               </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => setMeetingDuration(30)}>30 min</Button>
+              <Button variant="outline" size="sm" onClick={() => setMeetingDuration(45)}>45 min</Button>
+              <Button variant="outline" size="sm" onClick={() => setMeetingDuration(60)}>60 min</Button>
+              <Button variant="outline" size="sm" onClick={() => setMeetingDuration(90)}>90 min</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const now = new Date(Date.now() + 30 * 60000);
+                  setMeetingDate(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
+                  setMeetingStart(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
+                }}
+              >
+                Start in 30 min
+              </Button>
+            </div>
+
+            <div className="rounded-md border p-3 bg-blue-50/50 dark:bg-blue-950/20">
+              <p className="font-medium mb-2">Join with meeting apps</p>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => openMeetingIntegration(meetingIntegrationLinks.google, 'google-link')} className="gap-2" variant="outline">
+                  Google Meet
+                </Button>
+                <Button onClick={() => openMeetingIntegration(meetingIntegrationLinks.teams, 'teams-link')} className="gap-2" variant="outline">
+                  Microsoft Teams
+                </Button>
+                <Button onClick={() => openMeetingIntegration(meetingIntegrationLinks.zoom, 'zoom-link')} className="gap-2" variant="outline">
+                  Zoom
+                </Button>
+                <Button onClick={copyShareableLink} className="gap-2" variant="outline">
+                  {copied === 'share-link' ? 'Link Copied!' : 'Copy Share Link'}
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-md border p-3 bg-slate-50/60 dark:bg-slate-900/40">
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <p className="font-medium flex items-center gap-2"><Users className="w-4 h-4" /> Team Profiles</p>
+                <div className="flex gap-2">
+                  <Button onClick={() => setShowAdvancedPlanner((prev) => !prev)} variant="outline" size="sm">
+                    {showAdvancedPlanner ? 'Hide Advanced' : 'Show Advanced'}
+                  </Button>
+                  <Button onClick={applyTeamTimezones} variant="outline" size="sm">
+                    Apply Team Timezones
+                  </Button>
+                </div>
+              </div>
+
+              {showAdvancedPlanner && (
+                <>
+                  <div className="grid gap-2 md:grid-cols-5">
+                    <Input
+                      placeholder="Name"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                    />
+                    <select
+                      value={profileTimezone}
+                      onChange={(e) => setProfileTimezone(Number(e.target.value))}
+                      className="w-full rounded-md border border-input bg-transparent px-3 py-2"
+                    >
+                      {TIMEZONE_DATA.map((tz) => (
+                        <option key={`profile-${tz.v}`} value={tz.v}>{tz.l}</option>
+                      ))}
+                    </select>
+                    <Input type="time" value={profileWorkStart} onChange={(e) => setProfileWorkStart(e.target.value)} />
+                    <Input type="time" value={profileWorkEnd} onChange={(e) => setProfileWorkEnd(e.target.value)} />
+                    <Button onClick={addTeamProfile} className="gap-2">
+                      <Plus className="w-4 h-4" />
+                      Add Member
+                    </Button>
+                  </div>
+
+                  {teamProfiles.length > 0 && (
+                    <div className="mt-3 grid gap-2">
+                      {teamProfiles.map((profile) => {
+                        const tz = TIMEZONE_DATA.find((item) => item.v === profile.timezone);
+                        return (
+                          <div key={profile.id} className="rounded border p-2 flex items-center justify-between gap-2">
+                            <div className="text-sm">
+                              <span className="font-medium">{profile.name}</span>
+                              <span className="text-gray-600 dark:text-gray-400"> · {tz?.l || `UTC${profile.timezone >= 0 ? '+' : ''}${profile.timezone}`} · {profile.workStart}-{profile.workEnd}</span>
+                            </div>
+                            <Button onClick={() => removeTeamProfile(profile.id)} variant="ghost" size="sm" className="text-red-600">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="space-y-2">

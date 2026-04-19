@@ -167,6 +167,8 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
     render(<TimezoneConverter />);
     fireEvent.click(screen.getByRole('button', { name: /Meeting Planner/i }));
 
+    fireEvent.click(screen.getByRole('button', { name: /Show Advanced/i }));
+
     const nameInput = await screen.findByPlaceholderText(/Name/i);
     await userEvent.type(nameInput, 'Alex');
     fireEvent.click(screen.getByRole('button', { name: /Add Member/i }));
@@ -179,5 +181,16 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   test('has share setup button for URL-based sharing', () => {
     render(<TimezoneConverter />);
     expect(screen.getByRole('button', { name: /Share Setup/i })).toBeInTheDocument();
+  });
+
+  test('shows meeting app integration buttons', async () => {
+    render(<TimezoneConverter />);
+    fireEvent.click(screen.getByRole('button', { name: /Meeting Planner/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Google Meet/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Microsoft Teams/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Zoom/i })).toBeInTheDocument();
+    });
   });
 });

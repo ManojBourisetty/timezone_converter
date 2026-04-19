@@ -112,17 +112,17 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
     });
   });
 
-  test('quick city selection replaces the current offset representative with the clicked city', async () => {
+  test('quick city selection adds a separate city card for the same timezone offset', async () => {
     render(<TimezoneConverter />);
 
     expect(screen.getByText(/\(New York\)/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /^Miami$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Boston$/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/\(Miami\)/i)).toBeInTheDocument();
-      expect(screen.queryByText(/\(New York\)/i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/\(Toronto\)/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/\(New York\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/\(Boston\)/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Offset:/i)).toHaveLength(4);
     });
   });
 

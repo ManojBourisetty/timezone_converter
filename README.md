@@ -29,6 +29,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Sticky navigation now adds pinned-state depth and live tab context badges for faster scanning
 - Added a more polished visual layer with atmospheric background treatment, refined action buttons, and stronger section/card surfaces
 - Quick City Access now promotes the exact clicked city instead of collapsing multiple same-offset cities into one generic selection
+- Quick City Access can now add multiple city cards even when cities share the same UTC offset, so New York and Boston can appear side by side
 
 ## Feature Highlights
 
@@ -100,6 +101,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Added live tab metadata so users can scan active zone counts, participant counts, target timezone context, and available overlap slots.
 - Tightened card styling, section headers, and shortcut surfaces so the interface feels more cohesive without changing the underlying workflow.
 - Fixed quick-city selection so cities like Miami and Toronto no longer implicitly resolve back to the default New York entry.
+- Refined same-timezone city behavior so selecting another city in the same offset adds a distinct card instead of replacing the existing city card.
 
 ## User Data Scope
 

@@ -113,6 +113,8 @@ const buildQuickCityTimezone = (city) => {
   };
 };
 
+const getTimezoneKey = (tz) => tz.cityKey || `${tz.v}-${tz.l}`;
+
 const formatTimezoneDisplayLabel = (date, tz) => {
   return `${getTimeZoneOffsetLabel(date, tz)} (${getTimezoneCityLabel(tz)})`;
 };
@@ -362,14 +364,14 @@ export default function TimezoneConverter() {
 
   // Handle adding timezone
   const addTimezone = (tz) => {
-    setSelectedTimezones((prev) => (prev.find((t) => t.v === tz.v) ? prev : [...prev, tz]));
+    setSelectedTimezones((prev) => (prev.find((t) => t.v === tz.v && t.l === tz.l) ? prev : [...prev, tz]));
     setSearchOpen(false);
     setSearchQuery('');
   };
 
   // Handle removing timezone
-  const removeTimezone = (offset) => {
-    setSelectedTimezones((prev) => prev.filter((t) => t.v !== offset));
+  const removeTimezone = (timezoneKey) => {
+    setSelectedTimezones((prev) => prev.filter((t) => getTimezoneKey(t) !== timezoneKey));
   };
 
   const preserveQuickCityPosition = (buttonKey, previousTop) => {
@@ -391,14 +393,9 @@ export default function TimezoneConverter() {
     const previousTop = buttonElement?.getBoundingClientRect?.().top ?? null;
 
     setSelectedTimezones((prev) => {
-      const existingCityIndex = prev.findIndex((item) => item.cityKey === buttonKey);
-      if (existingCityIndex >= 0) {
-        return prev.filter((item) => item.cityKey !== buttonKey);
-      }
-
-      const existingOffsetIndex = prev.findIndex((item) => item.v === tz.v);
-      if (existingOffsetIndex >= 0) {
-        return prev.map((item, index) => (index === existingOffsetIndex ? tz : item));
+      const existingCity = prev.find((item) => getTimezoneKey(item) === buttonKey);
+      if (existingCity) {
+        return prev.filter((item) => getTimezoneKey(item) !== buttonKey);
       }
 
       return [...prev, tz];
@@ -552,7 +549,7 @@ export default function TimezoneConverter() {
       const inWorkHours = localMinutes >= workStart && (localMinutes + duration) <= workEnd;
 
       return {
-        key: tz.v,
+        key: getTimezoneKey(tz),
         timezoneLabel: tz.l,
         rangeText: `${formatDate(localStart)} ${formatTimeOnly(localStart)} - ${formatTimeOnly(localEnd)}`,
         inWorkHours,
@@ -759,6 +756,7 @@ export default function TimezoneConverter() {
       {activeView === 'world' && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {selectedTimezones.map((tz) => {
+            const timezoneKey = getTimezoneKey(tz);
             const formattedTime = formatDisplayTime(time, tz.timeZone);
             const formattedDate = formatDisplayDate(time, tz.timeZone);
             const timeOnly = formatDisplayTime(time, tz.timeZone, false);
@@ -766,7 +764,7 @@ export default function TimezoneConverter() {
             const offsetLabel = getTimeZoneOffsetLabel(time, tz);
 
             return (
-              <Card key={tz.v} className="relative overflow-hidden border-slate-200/80 bg-white/92 shadow-[0_18px_42px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/82">
+              <Card key={timezoneKey} className="relative overflow-hidden border-slate-200/80 bg-white/92 shadow-[0_18px_42px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/82">
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
 
                 <CardHeader className="pb-3">
@@ -794,7 +792,7 @@ export default function TimezoneConverter() {
 
                       {selectedTimezones.length > 1 && (
                         <Button
-                          onClick={() => removeTimezone(tz.v)}
+                          onClick={() => removeTimezone(timezoneKey)}
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
@@ -818,23 +816,23 @@ export default function TimezoneConverter() {
 
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => copyToClipboard(formattedTime, `time-${tz.v}`)}
+                      onClick={() => copyToClipboard(formattedTime, `time-${timezoneKey}`)}
                       variant="outline"
                       size="sm"
                       className="flex-1 gap-1"
                     >
                       <Copy className="w-4 h-4" />
-                      {copied === `time-${tz.v}` ? 'Copied!' : 'Time'}
+                      {copied === `time-${timezoneKey}` ? 'Copied!' : 'Time'}
                     </Button>
 
                     <Button
-                      onClick={() => copyToClipboard(formattedDate, `date-${tz.v}`)}
+                      onClick={() => copyToClipboard(formattedDate, `date-${timezoneKey}`)}
                       variant="outline"
                       size="sm"
                       className="flex-1 gap-1"
                     >
                       <Copy className="w-4 h-4" />
-                      {copied === `date-${tz.v}` ? 'Copied!' : 'Date'}
+                      {copied === `date-${timezoneKey}` ? 'Copied!' : 'Date'}
                     </Button>
                   </div>
 
@@ -947,7 +945,7 @@ export default function TimezoneConverter() {
                   className={fieldClass}
                 >
                   {selectedTimezones.map((tz) => (
-                    <option key={`host-${tz.v}`} value={tz.v}>{tz.l}</option>
+                    <option key={`host-${getTimezoneKey(tz)}`} value={tz.v}>{tz.l}</option>
                   ))}
                 </select>
               </div>
@@ -1130,7 +1128,7 @@ export default function TimezoneConverter() {
                   <p className="font-semibold mb-2">UTC Slot: {toHHMM(utcMinute)} - {toHHMM(utcMinute + Math.max(15, Math.min(180, Number(meetingDuration) || 60)))}</p>
                   <div className="grid xl:grid-cols-2 gap-2 text-sm">
                     {selectedTimezones.map((tz) => (
-                      <div key={`${utcMinute}-${tz.v}`} className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-2 py-1 dark:border-slate-700 dark:bg-slate-900/50">
+                      <div key={`${utcMinute}-${getTimezoneKey(tz)}`} className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-2 py-1 dark:border-slate-700 dark:bg-slate-900/50">
                         <span className="font-medium">{tz.l}</span>
                         <span className="text-gray-600 dark:text-gray-400">: {toHHMM(utcMinute + tz.v * 60)} - {toHHMM(utcMinute + tz.v * 60 + Math.max(15, Math.min(180, Number(meetingDuration) || 60)))}</span>
                       </div>
@@ -1159,14 +1157,20 @@ export default function TimezoneConverter() {
               if (!tz) return null;
 
               const cityKey = tz.cityKey;
+              const isSelected = selectedTimezones.some((t) => t.cityKey === cityKey);
 
               return (
                 <Button
                   key={cityKey}
                   onClick={(event) => toggleTimezoneSelection(tz, event.currentTarget, cityKey)}
-                  variant={selectedTimezones.find((t) => t.cityKey === cityKey) ? 'default' : 'outline'}
+                  variant="outline"
                   size="sm"
-                  className="justify-start rounded-xl border-slate-200 bg-white/85 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/70 dark:hover:bg-slate-900"
+                  className={[
+                    'justify-start rounded-xl shadow-sm transition-colors',
+                    isSelected
+                      ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200'
+                      : 'border-slate-200 bg-white/85 text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:bg-slate-900',
+                  ].join(' ')}
                   ref={(element) => {
                     if (element) {
                       quickCityButtonRefs.current[cityKey] = element;

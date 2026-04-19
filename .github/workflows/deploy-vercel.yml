@@ -44,6 +44,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install backend dependencies
         working-directory: ${{ github.workspace }}
@@ -52,9 +54,7 @@ jobs:
       - name: Run backend security scan
         working-directory: ${{ github.workspace }}
         continue-on-error: true
-        run: |
-          pip install bandit
-          bandit -r backend/ -f txt -ll
+        run: bandit -r backend/ -f txt -ll
 
       - name: Run backend tests
         working-directory: ${{ github.workspace }}

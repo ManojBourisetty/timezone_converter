@@ -4,8 +4,8 @@ A modern, real-time timezone converter web application built with React and Fast
 
 ## Live URLs
 
-- UI: https://timezone-converter-ui.vercel.app
-- Backend Health: https://timezone-converter-jsovazznk-manojbourisettys-projects.vercel.app/api/health
+- UI: https://timezone-converter-app.vercel.app
+- Backend Health: https://timezone-converter-app.vercel.app/api/health
 
 ![Timezone Converter Screenshot](https://via.placeholder.com/800x400/4F46E5/FFFFFF?text=Timezone+Converter+App)
 

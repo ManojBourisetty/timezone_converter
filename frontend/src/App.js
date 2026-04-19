@@ -5,22 +5,34 @@ import TimezoneConverter from "./components/TimezoneConverter";
 
 function BrowserLocalTimeBar() {
   const [now, setNow] = useState(new Date());
-  const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Local Timezone";
+  const browserTimezone = (() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "Local Timezone";
+    } catch {
+      return "Local Timezone";
+    }
+  })();
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const prettyTime = new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "2-digit",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  }).format(now);
+  const prettyTime = (() => {
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "2-digit",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }).format(now);
+    } catch {
+      return now.toLocaleString();
+    }
+  })();
 
   return (
     <div className="sticky top-0 z-50 border-b border-cyan-100 bg-gradient-to-r from-cyan-50 via-sky-50 to-blue-50 backdrop-blur-sm">

@@ -324,7 +324,13 @@ const TimezoneConverter = () => {
   const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
   const [isUsingCurrentTime, setIsUsingCurrentTime] = useState(false);
   const [browseDialog, setBrowseDialog] = useState(null); // 'source' | 'target' | null
-  const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local Timezone';
+  const browserTimezone = (() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local Timezone';
+    } catch {
+      return 'Local Timezone';
+    }
+  })();
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -744,7 +750,7 @@ const TimezoneConverter = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {majorCitiesData.map((city) => (
+              {majorCitiesData.filter((city) => city && city.city && city.timezone).map((city) => (
                 <div
                   key={city.timezone}
                   data-testid={`city-${city.city.toLowerCase()}`}

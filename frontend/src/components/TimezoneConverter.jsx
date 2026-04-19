@@ -13,13 +13,6 @@ import { TIMEZONE_DATA, MAJOR_CITIES } from '../data/timezoneData';
 
 const pad = (n) => String(n).padStart(2, '0');
 
-const formatTime12 = (date) => {
-  const h = date.getUTCHours();
-  const m = pad(date.getUTCMinutes());
-  const s = pad(date.getUTCSeconds());
-  return `${pad(h % 12 || 12)}:${m}:${s} ${h >= 12 ? 'PM' : 'AM'}`;
-};
-
 const formatTimeOnly = (date) => {
   const h = date.getUTCHours();
   const m = pad(date.getUTCMinutes());
@@ -28,6 +21,84 @@ const formatTimeOnly = (date) => {
 
 const formatDate = (date) => {
   return `${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
+};
+
+const getFormatterParts = (date, options) => {
+  return new Intl.DateTimeFormat('en-GB', options).formatToParts(date);
+};
+
+const getPartValue = (parts, type) => {
+  return parts.find((part) => part.type === type)?.value || '';
+};
+
+const formatDisplayDate = (date, timeZone) => {
+  try {
+    const parts = getFormatterParts(date, {
+      timeZone,
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    return `${getPartValue(parts, 'day')}/${getPartValue(parts, 'month')}/${getPartValue(parts, 'year')}`;
+  } catch {
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+  }
+};
+
+const formatDisplayTime = (date, timeZone, includeSeconds = true) => {
+  try {
+    const parts = getFormatterParts(date, {
+      timeZone,
+      hour: '2-digit',
+      minute: '2-digit',
+      ...(includeSeconds ? { second: '2-digit' } : {}),
+      hour12: true,
+    });
+
+    const secondPart = includeSeconds ? `:${getPartValue(parts, 'second')}` : '';
+    return `${getPartValue(parts, 'hour')}:${getPartValue(parts, 'minute')}${secondPart} ${getPartValue(parts, 'dayPeriod').toUpperCase()}`;
+  } catch {
+    const hours = date.getHours();
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+    return `${pad(hours % 12 || 12)}:${minutes}${includeSeconds ? `:${seconds}` : ''} ${hours >= 12 ? 'PM' : 'AM'}`;
+  }
+};
+
+const formatFallbackOffsetLabel = (offset) => {
+  if (offset === 0) return 'UTC';
+
+  const absolute = Math.abs(offset);
+  const hours = Math.trunc(absolute);
+  const minutes = Math.round((absolute - hours) * 60);
+  const sign = offset >= 0 ? '+' : '-';
+  return `UTC${sign}${hours}${minutes ? `:${pad(minutes)}` : ''}`;
+};
+
+const getTimeZoneOffsetLabel = (date, tz) => {
+  if (!tz?.timeZone) {
+    return formatFallbackOffsetLabel(tz?.v ?? 0);
+  }
+
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz.timeZone,
+      timeZoneName: 'shortOffset',
+    }).formatToParts(date);
+    const offsetLabel = getPartValue(parts, 'timeZoneName').replace('GMT', 'UTC');
+    return offsetLabel === 'UTC+0' ? 'UTC' : offsetLabel;
+  } catch {
+    return formatFallbackOffsetLabel(tz.v);
+  }
+};
+
+const getTimezoneCityLabel = (tz) => {
+  const match = tz.l.match(/\(([^)]+)\)/);
+  return match ? match[1] : tz.l;
+};
+
+const formatTimezoneDisplayLabel = (date, tz) => {
+  return `${getTimeZoneOffsetLabel(date, tz)} (${getTimezoneCityLabel(tz)})`;
 };
 
 const parseHHMM = (hhmm) => {
@@ -236,12 +307,6 @@ export default function TimezoneConverter() {
     localStorage.setItem('teamProfiles', JSON.stringify(teamProfiles));
   }, [teamProfiles]);
 
-  // Calculate time for a timezone
-  const calculateTime = (offset) => {
-    const now = Date.now();
-    return new Date(now + offset * 3600000);
-  };
-
   // Handle adding timezone
   const addTimezone = (tz) => {
     if (!selectedTimezones.find((t) => t.v === tz.v)) {
@@ -249,6 +314,15 @@ export default function TimezoneConverter() {
     }
     setSearchOpen(false);
     setSearchQuery('');
+  };
+
+  const toggleTimezoneSelection = (tz) => {
+    if (selectedTimezones.find((item) => item.v === tz.v)) {
+      removeTimezone(tz.v);
+      return;
+    }
+
+    addTimezone(tz);
   };
 
   // Handle removing timezone
@@ -442,7 +516,7 @@ export default function TimezoneConverter() {
             <div className="min-w-0">
               <p className="text-sm font-semibold text-green-700 dark:text-green-300">Your Browser Local Time</p>
               <p className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-100 break-words">
-                {formatDate(time)} · {formatTime12(time)}
+                {formatDisplayDate(time)} · {formatDisplayTime(time)}
               </p>
             </div>
             <Clock className="w-8 h-8 text-green-600 shrink-0" />
@@ -520,10 +594,11 @@ export default function TimezoneConverter() {
       {activeView === 'world' && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {selectedTimezones.map((tz) => {
-            const tzTime = calculateTime(tz.v);
-            const formattedTime = formatTime12(tzTime);
-            const formattedDate = formatDate(tzTime);
-            const timeOnly = formatTimeOnly(tzTime);
+            const formattedTime = formatDisplayTime(time, tz.timeZone);
+            const formattedDate = formatDisplayDate(time, tz.timeZone);
+            const timeOnly = formatDisplayTime(time, tz.timeZone, false);
+            const timezoneLabel = formatTimezoneDisplayLabel(time, tz);
+            const offsetLabel = getTimeZoneOffsetLabel(time, tz);
 
             return (
               <Card key={tz.v} className="relative overflow-hidden hover:shadow-lg transition-shadow">
@@ -532,9 +607,9 @@ export default function TimezoneConverter() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg">{tz.l}</CardTitle>
+                      <CardTitle className="text-lg">{timezoneLabel}</CardTitle>
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {MAJOR_CITIES.find((c) => c.timezone === tz.v)?.city || 'Region'}
+                        {getTimezoneCityLabel(tz)}
                       </p>
                     </div>
 
@@ -599,7 +674,7 @@ export default function TimezoneConverter() {
                   </div>
 
                   <Badge variant="secondary" className="w-full justify-center">
-                    Offset: {tz.v > 0 ? '+' : ''}{tz.v} hours from UTC
+                    Offset: {offsetLabel}
                   </Badge>
                 </CardContent>
               </Card>
@@ -908,7 +983,7 @@ export default function TimezoneConverter() {
               return (
                 <Button
                   key={offset}
-                  onClick={() => addTimezone(tz)}
+                  onClick={() => toggleTimezoneSelection(tz)}
                   variant={selectedTimezones.find((t) => t.v === offset) ? 'default' : 'outline'}
                   size="sm"
                   className="justify-start"

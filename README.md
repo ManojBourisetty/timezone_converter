@@ -16,8 +16,11 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Shareable setup via URL parameters
 - Team profiles with preferred timezone + working-hour windows
 - Quick city shortcuts and favorites
+- Quick city buttons now toggle selected cities on and off directly
 - Meeting app launch links (Google Meet/Calendar, Microsoft Teams, Zoom)
 - Responsive cross-browser layout hardening (including iPad Safari)
+- Browser local time banner now reflects the user's real device/browser timezone
+- World clock city times are DST-aware for regional timezones like New York and London
 
 ## Feature Highlights
 
@@ -56,6 +59,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 
 - Planner state is mirrored in URL query params
 - Opening a link restores current planning setup
+- Without a shared link, each browser session stays independent
 
 ### 7) Team Profiles
 
@@ -79,6 +83,14 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Google/Teams/Zoom meeting launch links added from planner context.
 - Team profile management moved behind an advanced toggle to reduce UI complexity for first-time use.
 - Improved responsive behavior to prevent field overlap/disorientation on tablet and Safari browsers.
+- Quick city access now toggles cities off directly instead of requiring removal from world clock cards.
+- Fixed incorrect browser-local and regional world-clock time rendering by using timezone-aware display formatting.
+
+## User Data Scope
+
+- The app is client-side and user state is stored in that user's browser, primarily through localStorage and the current URL.
+- One user's changes are not shown to another user unless they are using the same browser profile on the same device or explicitly share a URL that contains planner state.
+- Favorites and team profiles are browser-local, not shared across different users by default.
 
 ## Tech Stack
 

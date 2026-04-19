@@ -17,6 +17,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Team profiles with preferred timezone + working-hour windows
 - Quick city shortcuts and favorites
 - Quick city buttons now toggle selected cities on and off directly
+- Quick city selection keeps the chooser stable while adding multiple cities
 - Meeting app launch links (Google Meet/Calendar, Microsoft Teams, Zoom)
 - Responsive cross-browser layout hardening (including iPad Safari)
 - Browser local time banner now reflects the user's real device/browser timezone
@@ -84,6 +85,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Team profile management moved behind an advanced toggle to reduce UI complexity for first-time use.
 - Improved responsive behavior to prevent field overlap/disorientation on tablet and Safari browsers.
 - Quick city access now toggles cities off directly instead of requiring removal from world clock cards.
+- Quick city selection no longer jumps away while adding multiple cities from the shortcut grid.
 - Fixed incorrect browser-local and regional world-clock time rendering by using timezone-aware display formatting.
 
 ## User Data Scope

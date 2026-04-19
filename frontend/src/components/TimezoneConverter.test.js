@@ -109,6 +109,35 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
     });
   });
 
+  test('quick city selection compensates for layout shift while adding cities', async () => {
+    const originalScrollBy = window.scrollBy;
+    const scrollByMock = jest.fn();
+    window.scrollBy = scrollByMock;
+
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    window.requestAnimationFrame = (callback) => {
+      callback();
+      return 0;
+    };
+
+    render(<TimezoneConverter />);
+
+    const tokyoButton = screen.getByRole('button', { name: /^Tokyo$/i });
+    const rectMock = jest.fn()
+      .mockReturnValueOnce({ top: 240 })
+      .mockReturnValue({ top: 320 });
+    tokyoButton.getBoundingClientRect = rectMock;
+
+    fireEvent.click(tokyoButton);
+
+    await waitFor(() => {
+      expect(scrollByMock).toHaveBeenCalledWith(0, 80);
+    });
+
+    window.scrollBy = originalScrollBy;
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
   test('renders favorite button for each timezone', () => {
     render(<TimezoneConverter />);
     const favoriteButtons = screen.getAllByRole('button').filter(btn => 

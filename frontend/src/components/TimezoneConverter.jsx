@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -209,6 +209,7 @@ const findOverlapSlots = (timezones, durationMinutes) => {
 export default function TimezoneConverter() {
   const [activeView, setActiveView] = useState('world');
   const [selectedTimezones, setSelectedTimezones] = useState(defaultTimezones);
+  const quickCityButtonRefs = useRef({});
 
   const [favorites, setFavorites] = useState(() => {
     try {
@@ -309,25 +310,43 @@ export default function TimezoneConverter() {
 
   // Handle adding timezone
   const addTimezone = (tz) => {
-    if (!selectedTimezones.find((t) => t.v === tz.v)) {
-      setSelectedTimezones([...selectedTimezones, tz]);
-    }
+    setSelectedTimezones((prev) => (prev.find((t) => t.v === tz.v) ? prev : [...prev, tz]));
     setSearchOpen(false);
     setSearchQuery('');
   };
 
-  const toggleTimezoneSelection = (tz) => {
-    if (selectedTimezones.find((item) => item.v === tz.v)) {
-      removeTimezone(tz.v);
-      return;
-    }
-
-    addTimezone(tz);
-  };
-
   // Handle removing timezone
   const removeTimezone = (offset) => {
-    setSelectedTimezones(selectedTimezones.filter((t) => t.v !== offset));
+    setSelectedTimezones((prev) => prev.filter((t) => t.v !== offset));
+  };
+
+  const preserveQuickCityPosition = (offset, previousTop) => {
+    if (previousTop == null || typeof window === 'undefined') return;
+
+    window.requestAnimationFrame(() => {
+      const button = quickCityButtonRefs.current[offset];
+      if (!button || typeof button.getBoundingClientRect !== 'function') return;
+
+      const currentTop = button.getBoundingClientRect().top;
+      const delta = currentTop - previousTop;
+      if (Math.abs(delta) > 1 && typeof window.scrollBy === 'function') {
+        window.scrollBy(0, delta);
+      }
+    });
+  };
+
+  const toggleTimezoneSelection = (tz, buttonElement) => {
+    const previousTop = buttonElement?.getBoundingClientRect?.().top ?? null;
+
+    setSelectedTimezones((prev) => {
+      if (prev.find((item) => item.v === tz.v)) {
+        return prev.filter((item) => item.v !== tz.v);
+      }
+
+      return [...prev, tz];
+    });
+
+    preserveQuickCityPosition(tz.v, previousTop);
   };
 
   // Handle favorite toggle
@@ -983,10 +1002,17 @@ export default function TimezoneConverter() {
               return (
                 <Button
                   key={offset}
-                  onClick={() => toggleTimezoneSelection(tz)}
+                  onClick={(event) => toggleTimezoneSelection(tz, event.currentTarget)}
                   variant={selectedTimezones.find((t) => t.v === offset) ? 'default' : 'outline'}
                   size="sm"
                   className="justify-start"
+                  ref={(element) => {
+                    if (element) {
+                      quickCityButtonRefs.current[offset] = element;
+                    } else {
+                      delete quickCityButtonRefs.current[offset];
+                    }
+                  }}
                 >
                   {city.city}
                 </Button>

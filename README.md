@@ -2,6 +2,11 @@
 
 A modern, real-time timezone converter web application built with React and FastAPI. Convert time between any two timezones with accurate calculations and a beautiful, responsive interface.
 
+## Live URLs
+
+- UI: https://timezone-converter-ui.vercel.app
+- Backend Health: https://timezone-converter-jsovazznk-manojbourisettys-projects.vercel.app/api/health
+
 ![Timezone Converter Screenshot](https://via.placeholder.com/800x400/4F46E5/FFFFFF?text=Timezone+Converter+App)
 
 ## ✨ Features
@@ -276,16 +281,15 @@ We welcome contributions! Please follow these steps:
 - Write tests for new features
 - Update documentation for API changes
 
-## � Author
+## Author
 
 **ManojBourisetty**
 
-## �📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙋‍♂️ Support
-=======
 
 If you have any questions or need help:
 
@@ -315,7 +319,6 @@ If you have any questions or need help:
 
 **Built with ❤️ using React, FastAPI, and modern web technologies**
 
-[Demo](https://timezone-converter-demo.com) • [Documentation](https://docs.timezone-converter.com) • [Report Bug](https://github.com/yourusername/timezone-converter/issues)
+[Live UI](https://timezone-converter-ui.vercel.app) • [Backend Health](https://timezone-converter-jsovazznk-manojbourisettys-projects.vercel.app/api/health) • [Report Bug](https://github.com/ManojBourisetty/timezone_converter/issues)
 
 </div>
-# VS Code monitoring test

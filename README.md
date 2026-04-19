@@ -27,6 +27,8 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Navigation stack stays sticky on scroll so tool switching remains reachable on longer pages
 - Active tool panels use subtle transitions for smoother section changes
 - Sticky navigation now adds pinned-state depth and live tab context badges for faster scanning
+- Added a more polished visual layer with atmospheric background treatment, refined action buttons, and stronger section/card surfaces
+- Quick City Access now promotes the exact clicked city instead of collapsing multiple same-offset cities into one generic selection
 
 ## Feature Highlights
 
@@ -96,6 +98,8 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Kept the local-time banner and tool navigation accessible during scroll with a sticky top stack.
 - Added lighter motion and tighter header spacing so the interface feels more cohesive.
 - Added live tab metadata so users can scan active zone counts, participant counts, target timezone context, and available overlap slots.
+- Tightened card styling, section headers, and shortcut surfaces so the interface feels more cohesive without changing the underlying workflow.
+- Fixed quick-city selection so cities like Miami and Toronto no longer implicitly resolve back to the default New York entry.
 
 ## User Data Scope
 

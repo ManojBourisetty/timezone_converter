@@ -112,6 +112,20 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
     });
   });
 
+  test('quick city selection replaces the current offset representative with the clicked city', async () => {
+    render(<TimezoneConverter />);
+
+    expect(screen.getByText(/\(New York\)/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Miami$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/\(Miami\)/i)).toBeInTheDocument();
+      expect(screen.queryByText(/\(New York\)/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/\(Toronto\)/i)).not.toBeInTheDocument();
+    });
+  });
+
   test('quick city selection compensates for layout shift while adding cities', async () => {
     const originalScrollBy = window.scrollBy;
     const scrollByMock = jest.fn();

@@ -97,6 +97,22 @@ const getTimezoneCityLabel = (tz) => {
   return match ? match[1] : tz.l;
 };
 
+const getDefaultTimezone = (offset, fallbackLabel) => {
+  return TIMEZONE_DATA.find((tz) => tz.v === offset) || { v: offset, l: fallbackLabel };
+};
+
+const buildQuickCityTimezone = (city) => {
+  const baseTimezone = getDefaultTimezone(city.timezone, `${city.offset} (${city.city})`);
+
+  return {
+    ...baseTimezone,
+    l: `${city.offset} (${city.city})`,
+    timeZone: city.timeZone || baseTimezone.timeZone,
+    cityKey: `${city.city}-${city.country}-${city.timezone}`,
+    cityName: city.city,
+  };
+};
+
 const formatTimezoneDisplayLabel = (date, tz) => {
   return `${getTimeZoneOffsetLabel(date, tz)} (${getTimezoneCityLabel(tz)})`;
 };
@@ -110,9 +126,9 @@ const parseHHMM = (hhmm) => {
 };
 
 const defaultTimezones = [
-  { v: -5, l: 'UTC-5 (New York)' },
-  { v: 0, l: 'UTC (London)' },
-  { v: 5.5, l: 'UTC+5:30 (New Delhi)' },
+  getDefaultTimezone(-5, 'UTC-5 (New York)'),
+  getDefaultTimezone(0, 'UTC (London)'),
+  getDefaultTimezone(5.5, 'UTC+5:30 (New Delhi)'),
 ];
 
 const getTodayISO = () => {
@@ -375,8 +391,14 @@ export default function TimezoneConverter() {
     const previousTop = buttonElement?.getBoundingClientRect?.().top ?? null;
 
     setSelectedTimezones((prev) => {
-      if (prev.find((item) => item.v === tz.v)) {
-        return prev.filter((item) => item.v !== tz.v);
+      const existingCityIndex = prev.findIndex((item) => item.cityKey === buttonKey);
+      if (existingCityIndex >= 0) {
+        return prev.filter((item) => item.cityKey !== buttonKey);
+      }
+
+      const existingOffsetIndex = prev.findIndex((item) => item.v === tz.v);
+      if (existingOffsetIndex >= 0) {
+        return prev.map((item, index) => (index === existingOffsetIndex ? tz : item));
       }
 
       return [...prev, tz];
@@ -583,13 +605,22 @@ export default function TimezoneConverter() {
     },
   ];
 
+  const panelCardClass = 'border-slate-200/80 bg-white/92 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-slate-800 dark:bg-slate-950/82';
+  const fieldClass = 'w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-base text-slate-900 shadow-sm transition-colors focus:border-slate-400 focus:outline-none dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-100';
+
   return (
-    <div className="w-full max-w-6xl mx-auto p-3 sm:p-4 md:p-5 space-y-4 md:space-y-5 overflow-x-hidden">
+    <div className="relative w-full max-w-6xl mx-auto p-3 sm:p-4 md:p-5 space-y-4 md:space-y-5 overflow-x-hidden">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[22rem] overflow-hidden">
+        <div className="absolute left-[-6rem] top-2 h-40 w-40 rounded-full bg-sky-200/40 blur-3xl dark:bg-sky-700/20" />
+        <div className="absolute right-[-4rem] top-10 h-48 w-48 rounded-full bg-emerald-200/30 blur-3xl dark:bg-emerald-700/15" />
+        <div className="absolute inset-x-12 top-0 h-32 rounded-full bg-white/50 blur-3xl dark:bg-slate-900/30" />
+      </div>
+
       {/* HEADER */}
-      <div className="text-center space-y-2.5 py-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">
+      <div className="text-center space-y-3 py-2">
+        <div className="inline-flex items-center rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-400">
           Global Scheduling Toolkit
-        </p>
+        </div>
         <h1 className="text-3xl sm:text-4xl md:text-[2.7rem] font-semibold tracking-tight leading-none bg-gradient-to-r from-blue-600 via-sky-600 to-indigo-600 bg-clip-text text-transparent">
           ⏰ Timezone Converter
         </h1>
@@ -602,7 +633,7 @@ export default function TimezoneConverter() {
       <div className="flex flex-col lg:flex-row gap-3">
         <Button
           onClick={() => setSearchOpen(true)}
-          className="w-full lg:flex-1 gap-2 bg-blue-600 hover:bg-blue-700"
+          className="w-full lg:flex-1 gap-2 rounded-xl bg-slate-900 shadow-md shadow-slate-300/40 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200 dark:shadow-none"
           size="lg"
         >
           <Plus className="w-5 h-5" />
@@ -617,7 +648,7 @@ export default function TimezoneConverter() {
                 onClick={() => addTimezone(tz)}
                 variant="outline"
                 size="sm"
-                className="gap-1 min-w-0"
+                className="min-w-0 gap-1 rounded-xl border-slate-200 bg-white/80 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/70 dark:hover:bg-slate-900"
               >
                 <Star className="w-4 h-4 fill-yellow-400" />
                 <span className="truncate max-w-[9rem]">{tz.l.split(' ')[0]}</span>
@@ -626,7 +657,7 @@ export default function TimezoneConverter() {
           </div>
         )}
 
-        <Button onClick={copyShareableLink} variant="outline" className="w-full lg:w-auto gap-2" size="lg">
+        <Button onClick={copyShareableLink} variant="outline" className="w-full lg:w-auto gap-2 rounded-xl border-slate-200 bg-white/80 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/70 dark:hover:bg-slate-900" size="lg">
           <Link2 className="w-4 h-4" />
           {copied === 'share-link' ? 'Link Copied!' : 'Share Setup'}
         </Button>
@@ -639,7 +670,7 @@ export default function TimezoneConverter() {
           isTopStackPinned ? 'pt-2 drop-shadow-[0_18px_28px_rgba(15,23,42,0.12)] dark:drop-shadow-[0_18px_28px_rgba(2,6,23,0.45)]' : 'pt-0',
         ].join(' ')}
       >
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 shadow-sm dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
+        <Card className="border-green-200/90 bg-gradient-to-r from-green-50 via-emerald-50 to-lime-50 shadow-[0_14px_36px_rgba(34,197,94,0.12)] dark:border-green-900 dark:from-green-950 dark:via-emerald-950 dark:to-lime-950">
           <CardContent className="p-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
@@ -654,7 +685,7 @@ export default function TimezoneConverter() {
         </Card>
 
         <Card className={[
-          'border-slate-200/80 bg-white/90 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/80',
+          'border-slate-200/80 bg-white/90 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/80',
           isTopStackPinned ? 'ring-1 ring-slate-200/70 dark:ring-slate-700/70' : '',
         ].join(' ')}>
           <CardContent className="p-2">
@@ -735,7 +766,7 @@ export default function TimezoneConverter() {
             const offsetLabel = getTimeZoneOffsetLabel(time, tz);
 
             return (
-              <Card key={tz.v} className="relative overflow-hidden hover:shadow-lg transition-shadow">
+              <Card key={tz.v} className="relative overflow-hidden border-slate-200/80 bg-white/92 shadow-[0_18px_42px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/82">
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
 
                 <CardHeader className="pb-3">
@@ -776,12 +807,12 @@ export default function TimezoneConverter() {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 p-4 rounded-lg">
-                    <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{timeOnly}</div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{formattedDate}</p>
+                  <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-50 p-4 dark:border-blue-900 dark:from-blue-950 dark:via-sky-950 dark:to-indigo-950">
+                    <div className="text-3xl font-bold tracking-tight text-blue-900 dark:text-blue-100">{timeOnly}</div>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{formattedDate}</p>
                   </div>
 
-                  <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-sm font-mono">
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50/90 p-3 text-sm font-mono dark:border-slate-800 dark:bg-slate-900/80">
                     <div className="text-gray-700 dark:text-gray-300">{formattedTime}</div>
                   </div>
 
@@ -818,9 +849,12 @@ export default function TimezoneConverter() {
       )}
 
       {activeView === 'converter' && (
-        <Card>
+        <Card className={panelCardClass}>
           <CardHeader>
-            <CardTitle className="text-lg">Manual Timezone Conversion</CardTitle>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Conversion</p>
+              <CardTitle className="text-lg">Manual Timezone Conversion</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -829,7 +863,7 @@ export default function TimezoneConverter() {
                 <select
                   value={converterFrom}
                   onChange={(e) => setConverterFrom(Number(e.target.value))}
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
+                  className={fieldClass}
                 >
                   {TIMEZONE_DATA.map((tz) => (
                     <option key={`from-${tz.v}`} value={tz.v}>{tz.l}</option>
@@ -839,7 +873,7 @@ export default function TimezoneConverter() {
 
               <div className="space-y-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Input Time</p>
-                <Input type="time" value={converterTime} onChange={(e) => setConverterTime(e.target.value)} />
+                <Input type="time" value={converterTime} onChange={(e) => setConverterTime(e.target.value)} className={fieldClass} />
               </div>
 
               <div className="space-y-1">
@@ -847,7 +881,7 @@ export default function TimezoneConverter() {
                 <select
                   value={converterTo}
                   onChange={(e) => setConverterTo(Number(e.target.value))}
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
+                  className={fieldClass}
                 >
                   {TIMEZONE_DATA.map((tz) => (
                     <option key={`to-${tz.v}`} value={tz.v}>{tz.l}</option>
@@ -868,11 +902,11 @@ export default function TimezoneConverter() {
             </div>
 
             <div className="grid gap-3 lg:grid-cols-2">
-              <div className="rounded-lg border p-4">
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
                 <p className="text-sm text-gray-500 mb-1">Source</p>
                 <p className="font-semibold text-lg">{converterResult.fromText}</p>
               </div>
-              <div className="rounded-lg border p-4 bg-blue-50/60 dark:bg-blue-950/30">
+              <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900 dark:bg-blue-950/30">
                 <p className="text-sm text-gray-500 mb-1">Converted</p>
                 <p className="font-semibold text-lg flex items-center gap-2">
                   <ArrowRight className="w-4 h-4 text-blue-600" />
@@ -885,19 +919,22 @@ export default function TimezoneConverter() {
       )}
 
       {activeView === 'meeting' && (
-        <Card>
+        <Card className={panelCardClass}>
           <CardHeader>
-            <CardTitle className="text-lg">Meeting Planner</CardTitle>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Coordination</p>
+              <CardTitle className="text-lg">Meeting Planner</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 xl:grid-cols-2">
               <div className="space-y-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Meeting title</p>
-                <Input value={meetingTitle} onChange={(e) => setMeetingTitle(e.target.value)} placeholder="Global Team Meeting" />
+                <Input value={meetingTitle} onChange={(e) => setMeetingTitle(e.target.value)} placeholder="Global Team Meeting" className={fieldClass} />
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Notes (optional)</p>
-                <Input value={meetingNotes} onChange={(e) => setMeetingNotes(e.target.value)} placeholder="Agenda / context" />
+                <Input value={meetingNotes} onChange={(e) => setMeetingNotes(e.target.value)} placeholder="Agenda / context" className={fieldClass} />
               </div>
             </div>
 
@@ -907,7 +944,7 @@ export default function TimezoneConverter() {
                 <select
                   value={meetingHostOffset}
                   onChange={(e) => setMeetingHostOffset(Number(e.target.value))}
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
+                  className={fieldClass}
                 >
                   {selectedTimezones.map((tz) => (
                     <option key={`host-${tz.v}`} value={tz.v}>{tz.l}</option>
@@ -916,11 +953,11 @@ export default function TimezoneConverter() {
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Date</p>
-                <Input type="date" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} />
+                <Input type="date" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} className={fieldClass} />
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Start Time</p>
-                <Input type="time" value={meetingStart} onChange={(e) => setMeetingStart(e.target.value)} />
+                <Input type="time" value={meetingStart} onChange={(e) => setMeetingStart(e.target.value)} className={fieldClass} />
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Duration (minutes)</p>
@@ -931,6 +968,7 @@ export default function TimezoneConverter() {
                   step={15}
                   value={meetingDuration}
                   onChange={(e) => setMeetingDuration(Number(e.target.value))}
+                  className={fieldClass}
                 />
               </div>
             </div>
@@ -953,7 +991,7 @@ export default function TimezoneConverter() {
               </Button>
             </div>
 
-            <div className="rounded-md border p-3 bg-blue-50/50 dark:bg-blue-950/20">
+            <div className="rounded-xl border border-blue-100 p-3 bg-blue-50/60 dark:border-blue-900 dark:bg-blue-950/20">
               <p className="font-medium mb-2">Join with meeting apps</p>
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => openMeetingIntegration(meetingIntegrationLinks.google, 'google-link')} className="gap-2" variant="outline">
@@ -971,7 +1009,7 @@ export default function TimezoneConverter() {
               </div>
             </div>
 
-            <div className="rounded-md border p-3 bg-slate-50/60 dark:bg-slate-900/40">
+            <div className="rounded-xl border border-slate-200/80 p-3 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/40">
               <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
                 <p className="font-medium flex items-center gap-2"><Users className="w-4 h-4" /> Team Profiles</p>
                 <div className="flex gap-2 flex-wrap">
@@ -995,7 +1033,7 @@ export default function TimezoneConverter() {
                     <select
                       value={profileTimezone}
                       onChange={(e) => setProfileTimezone(Number(e.target.value))}
-                      className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
+                      className={fieldClass}
                     >
                       {TIMEZONE_DATA.map((tz) => (
                         <option key={`profile-${tz.v}`} value={tz.v}>{tz.l}</option>
@@ -1014,7 +1052,7 @@ export default function TimezoneConverter() {
                       {teamProfiles.map((profile) => {
                         const tz = TIMEZONE_DATA.find((item) => item.v === profile.timezone);
                         return (
-                          <div key={profile.id} className="rounded border p-2 flex items-center justify-between gap-2">
+                          <div key={profile.id} className="rounded-xl border border-slate-200/80 bg-white/90 p-2.5 flex items-center justify-between gap-2 dark:border-slate-800 dark:bg-slate-950/70">
                             <div className="text-sm min-w-0">
                               <span className="font-medium">{profile.name}</span>
                               <span className="text-gray-600 dark:text-gray-400 break-words"> · {tz?.l || `UTC${profile.timezone >= 0 ? '+' : ''}${profile.timezone}`} · {profile.workStart}-{profile.workEnd}</span>
@@ -1033,7 +1071,7 @@ export default function TimezoneConverter() {
 
             <div className="space-y-2">
               {meetingRows.map((row) => (
-                <div key={row.key} className="rounded-md border p-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+                <div key={row.key} className="rounded-xl border border-slate-200/80 bg-white/90 p-3 flex flex-col gap-2 dark:border-slate-800 dark:bg-slate-950/70 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
                     <p className="font-medium break-words">{row.timezoneLabel}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">{row.rangeText}</p>
@@ -1068,9 +1106,12 @@ export default function TimezoneConverter() {
       )}
 
       {activeView === 'overlap' && (
-        <Card>
+        <Card className={panelCardClass}>
           <CardHeader>
-            <CardTitle className="text-lg">Best Meeting Slots (9AM-5PM Overlap)</CardTitle>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Optimization</p>
+              <CardTitle className="text-lg">Best Meeting Slots (9AM-5PM Overlap)</CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -1078,18 +1119,18 @@ export default function TimezoneConverter() {
             </p>
 
             {overlapSlots.length === 0 && (
-              <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm">
+              <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm">
                 No overlap found for the current group and duration. Try reducing duration or removing one timezone.
               </div>
             )}
 
             <div className="grid gap-3">
               {overlapSlots.map((utcMinute) => (
-                <div key={utcMinute} className="rounded-md border p-3">
+                <div key={utcMinute} className="rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
                   <p className="font-semibold mb-2">UTC Slot: {toHHMM(utcMinute)} - {toHHMM(utcMinute + Math.max(15, Math.min(180, Number(meetingDuration) || 60)))}</p>
                   <div className="grid xl:grid-cols-2 gap-2 text-sm">
                     {selectedTimezones.map((tz) => (
-                      <div key={`${utcMinute}-${tz.v}`} className="rounded border border-dashed px-2 py-1">
+                      <div key={`${utcMinute}-${tz.v}`} className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-2 py-1 dark:border-slate-700 dark:bg-slate-900/50">
                         <span className="font-medium">{tz.l}</span>
                         <span className="text-gray-600 dark:text-gray-400">: {toHHMM(utcMinute + tz.v * 60)} - {toHHMM(utcMinute + tz.v * 60 + Math.max(15, Math.min(180, Number(meetingDuration) || 60)))}</span>
                       </div>
@@ -1104,25 +1145,28 @@ export default function TimezoneConverter() {
       </div>
 
       {/* Quick city shortcuts */}
-      <Card>
+      <Card className="border-slate-200/80 bg-white/92 shadow-[0_16px_36px_rgba(15,23,42,0.05)] dark:border-slate-800 dark:bg-slate-950/82">
         <CardHeader>
-          <CardTitle className="text-lg">📍 Quick City Access</CardTitle>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Shortcuts</p>
+            <CardTitle className="text-lg">📍 Quick City Access</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
             {MAJOR_CITIES.map((city) => {
-              const tz = TIMEZONE_DATA.find((t) => t.v === city.timezone);
+              const tz = buildQuickCityTimezone(city);
               if (!tz) return null;
 
-              const cityKey = `${city.city}-${city.country}-${city.timezone}`;
+              const cityKey = tz.cityKey;
 
               return (
                 <Button
                   key={cityKey}
                   onClick={(event) => toggleTimezoneSelection(tz, event.currentTarget, cityKey)}
-                  variant={selectedTimezones.find((t) => t.v === city.timezone) ? 'default' : 'outline'}
+                  variant={selectedTimezones.find((t) => t.cityKey === cityKey) ? 'default' : 'outline'}
                   size="sm"
-                  className="justify-start"
+                  className="justify-start rounded-xl border-slate-200 bg-white/85 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/70 dark:hover:bg-slate-900"
                   ref={(element) => {
                     if (element) {
                       quickCityButtonRefs.current[cityKey] = element;

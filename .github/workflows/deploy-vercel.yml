@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
   schedule:
     # Auto-retry deployment windows in case Vercel hobby quota blocked a prior push run.
-    - cron: '17 */4 * * *'
+    - cron: '17 * * * *'
 
 concurrency:
   group: deploy-vercel-${{ github.ref }}
@@ -111,11 +111,13 @@ jobs:
             while [[ "$attempt" -le "$max_attempts" ]]; do
               echo "${profile_name} deploy attempt ${attempt}/${max_attempts}"
 
-              set +e
-              VERCEL_ORG_ID="$org_id" VERCEL_PROJECT_ID="$project_id" \
-                vercel deploy --prebuilt --prod --token="$token" 2>&1 | tee "$deploy_log"
-              local exit_code=${PIPESTATUS[0]}
-              set -e
+              local exit_code=0
+              if VERCEL_ORG_ID="$org_id" VERCEL_PROJECT_ID="$project_id" \
+                vercel deploy --prebuilt --prod --token="$token" 2>&1 | tee "$deploy_log"; then
+                exit_code=0
+              else
+                exit_code=$?
+              fi
 
               if [[ "$exit_code" -eq 0 ]]; then
                 echo "${profile_name} deployment succeeded"
@@ -143,10 +145,11 @@ jobs:
           primary_result=0
           fallback_result=2
 
-          set +e
-          deploy_target "primary" "$PRIMARY_VERCEL_TOKEN" "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID"
-          primary_result=$?
-          set -e
+          if deploy_target "primary" "$PRIMARY_VERCEL_TOKEN" "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID"; then
+            primary_result=0
+          else
+            primary_result=$?
+          fi
 
           if [[ "$primary_result" -eq 0 ]]; then
             exit 0
@@ -154,10 +157,11 @@ jobs:
 
           echo "Primary profile did not deploy successfully (code: ${primary_result}). Attempting fallback profile."
 
-          set +e
-          deploy_target "fallback" "$FALLBACK_VERCEL_TOKEN" "$VERCEL_FALLBACK_ORG_ID" "$VERCEL_FALLBACK_PROJECT_ID"
-          fallback_result=$?
-          set -e
+          if deploy_target "fallback" "$FALLBACK_VERCEL_TOKEN" "$VERCEL_FALLBACK_ORG_ID" "$VERCEL_FALLBACK_PROJECT_ID"; then
+            fallback_result=0
+          else
+            fallback_result=$?
+          fi
 
           if [[ "$fallback_result" -eq 0 ]]; then
             exit 0

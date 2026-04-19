@@ -157,6 +157,7 @@ The deploy workflow now includes:
 - Automatic scheduled re-run every hour (`cron: 17 * * * *`) to retry after quota windows reset
 - Fallback deployment profile support (separate Vercel team/project)
 - If primary quota is exhausted and fallback secrets are not configured, the workflow records a warning and exits successfully so CI is not blocked while scheduled retries continue
+- Automatic trigger on changes under frontend and backend paths (plus workflow file changes)
 
 ### Configure Fallback Deployment Profile
 

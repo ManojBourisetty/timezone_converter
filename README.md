@@ -26,6 +26,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Top-level navigation refined into a clearer professional tabbed tool switcher
 - Navigation stack stays sticky on scroll so tool switching remains reachable on longer pages
 - Active tool panels use subtle transitions for smoother section changes
+- Sticky navigation now adds pinned-state depth and live tab context badges for faster scanning
 
 ## Feature Highlights
 
@@ -94,6 +95,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Refined page navigation for a cleaner professional tool-switching experience.
 - Kept the local-time banner and tool navigation accessible during scroll with a sticky top stack.
 - Added lighter motion and tighter header spacing so the interface feels more cohesive.
+- Added live tab metadata so users can scan active zone counts, participant counts, target timezone context, and available overlap slots.
 
 ## User Data Scope
 

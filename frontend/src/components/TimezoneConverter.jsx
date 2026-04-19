@@ -209,8 +209,10 @@ const findOverlapSlots = (timezones, durationMinutes) => {
 export default function TimezoneConverter() {
   const [activeView, setActiveView] = useState('world');
   const [isViewVisible, setIsViewVisible] = useState(false);
+  const [isTopStackPinned, setIsTopStackPinned] = useState(false);
   const [selectedTimezones, setSelectedTimezones] = useState(defaultTimezones);
   const quickCityButtonRefs = useRef({});
+  const stickyStackRef = useRef(null);
 
   const [favorites, setFavorites] = useState(() => {
     try {
@@ -323,6 +325,24 @@ export default function TimezoneConverter() {
 
     return () => window.cancelAnimationFrame(frame);
   }, [activeView]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const updatePinnedState = () => {
+      const stackTop = stickyStackRef.current?.getBoundingClientRect?.().top ?? 0;
+      setIsTopStackPinned(window.scrollY > 0 && stackTop <= 0.5);
+    };
+
+    updatePinnedState();
+    window.addEventListener('scroll', updatePinnedState, { passive: true });
+    window.addEventListener('resize', updatePinnedState);
+
+    return () => {
+      window.removeEventListener('scroll', updatePinnedState);
+      window.removeEventListener('resize', updatePinnedState);
+    };
+  }, []);
 
   // Handle adding timezone
   const addTimezone = (tz) => {
@@ -537,24 +557,28 @@ export default function TimezoneConverter() {
       key: 'world',
       label: 'World Clock',
       hint: 'Live city times',
+      meta: `${selectedTimezones.length} ${selectedTimezones.length === 1 ? 'zone' : 'zones'}`,
       icon: Clock,
     },
     {
       key: 'converter',
       label: 'Converter',
       hint: 'Shift between zones',
+      meta: `${getTimezoneCityLabel(TIMEZONE_DATA.find((tz) => tz.v === converterTo) || { l: 'target' })}`,
       icon: ArrowRight,
     },
     {
       key: 'meeting',
       label: 'Meeting Planner',
       hint: 'Plan shared availability',
+      meta: `${meetingRows.length} ${meetingRows.length === 1 ? 'participant' : 'participants'}`,
       icon: Briefcase,
     },
     {
       key: 'overlap',
       label: 'Best Slots',
       hint: 'Find work-hour overlap',
+      meta: `${overlapSlots.length} ${overlapSlots.length === 1 ? 'slot' : 'slots'}`,
       icon: Sparkles,
     },
   ];
@@ -608,7 +632,13 @@ export default function TimezoneConverter() {
         </Button>
       </div>
 
-      <div className="sticky top-0 z-20 space-y-3 pb-1">
+      <div
+        ref={stickyStackRef}
+        className={[
+          'sticky top-0 z-20 space-y-3 pb-1 transition-all duration-200 ease-out',
+          isTopStackPinned ? 'pt-2 drop-shadow-[0_18px_28px_rgba(15,23,42,0.12)] dark:drop-shadow-[0_18px_28px_rgba(2,6,23,0.45)]' : 'pt-0',
+        ].join(' ')}
+      >
         <Card className="bg-gradient-to-r from-green-50 to-emerald-50 shadow-sm dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
           <CardContent className="p-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -623,7 +653,10 @@ export default function TimezoneConverter() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/80 bg-white/90 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
+        <Card className={[
+          'border-slate-200/80 bg-white/90 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/80',
+          isTopStackPinned ? 'ring-1 ring-slate-200/70 dark:ring-slate-700/70' : '',
+        ].join(' ')}>
           <CardContent className="p-2">
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-2" role="tablist" aria-label="Timezone tools navigation">
               {navigationItems.map((item) => {
@@ -655,7 +688,17 @@ export default function TimezoneConverter() {
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold leading-none">{item.label}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="text-sm font-semibold leading-none">{item.label}</div>
+                          <span
+                            className={[
+                              'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                              isActive ? 'bg-white/15 text-white dark:bg-slate-900/15 dark:text-slate-900' : 'bg-slate-200/70 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                            ].join(' ')}
+                          >
+                            {item.meta}
+                          </span>
+                        </div>
                         <div className={[
                           'mt-1 text-xs transition-colors duration-200',
                           isActive ? 'text-slate-200 dark:text-slate-700' : 'text-slate-500 dark:text-slate-400',

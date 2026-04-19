@@ -2,9 +2,12 @@
 
 A modern multi-tool timezone productivity app with world clocks, manual conversion, global meeting planning, overlap intelligence, ICS calendar export, and shareable planner links.
 
+Includes a dedicated landing homepage at `/` and the interactive timezone workspace at `/app`.
+
 ## Live URL
 
-- App: https://timezone-converter-ui.vercel.app
+- Landing page: https://timezone-converter-ui.vercel.app/
+- Workspace app: https://timezone-converter-ui.vercel.app/app
 
 ## What Is Included
 
@@ -15,6 +18,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - ICS calendar export from meeting planner
 - Shareable setup via URL parameters
 - Shareable setup now preserves exact city identities for quick-city selections, not just raw UTC offsets
+- Stylish landing homepage with animated globe/time motif, feature sections, and quick-start CTAs into app views
 - Team profiles with preferred timezone + working-hour windows
 - Quick city shortcuts and favorites
 - Quick city buttons now toggle selected cities on and off directly

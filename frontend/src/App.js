@@ -2,6 +2,7 @@ import React from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import TimezoneConverter from "./components/TimezoneConverter";
+import LandingPage from "./components/LandingPage";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
@@ -47,8 +48,9 @@ function App() {
       <AppErrorBoundary>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<TimezoneConverter />} />
-            <Route path="*" element={<TimezoneConverter />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/app" element={<TimezoneConverter />} />
+            <Route path="*" element={<LandingPage />} />
           </Routes>
         </BrowserRouter>
       </AppErrorBoundary>

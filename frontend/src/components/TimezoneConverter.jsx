@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { ArrowRight, Briefcase, Clock, Copy, Heart, Plus, Search, Sparkles, Star, X } from 'lucide-react';
+import { ArrowRight, Briefcase, CalendarPlus, Clock, Copy, Download, Heart, Link2, Plus, Search, Sparkles, Star, Trash2, Users, X } from 'lucide-react';
 import { TIMEZONE_DATA, MAJOR_CITIES } from '../data/timezoneData';
 
 // ============================================================================
@@ -36,6 +36,63 @@ const parseHHMM = (hhmm) => {
     return 0;
   }
   return h * 60 + m;
+};
+
+const defaultTimezones = [
+  { v: -5, l: 'UTC-5 (New York)' },
+  { v: 0, l: 'UTC (London)' },
+  { v: 5.5, l: 'UTC+5:30 (New Delhi)' },
+];
+
+const getTodayISO = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+};
+
+const toUtcRange = (meetingDate, meetingStart, meetingHostOffset, meetingDuration) => {
+  const [year, month, day] = (meetingDate || getTodayISO()).split('-').map(Number);
+  const utcMidnight = Date.UTC(year, (month || 1) - 1, day || 1, 0, 0, 0);
+  const startMinutes = parseHHMM(meetingStart || '09:00');
+  const duration = Math.max(15, Math.min(480, Number(meetingDuration) || 60));
+  const utcStart = utcMidnight + (startMinutes - meetingHostOffset * 60) * 60000;
+  const utcEnd = utcStart + duration * 60000;
+  return { utcStart, utcEnd, duration };
+};
+
+const formatICSDate = (msUtc) => {
+  const d = new Date(msUtc);
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+};
+
+const buildICSContent = ({ title, description, location, utcStart, utcEnd }) => {
+  const uid = `tz-${utcStart}-${Math.random().toString(36).slice(2, 10)}@timezone-converter`;
+  const dtstamp = formatICSDate(Date.now());
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Timezone Converter//Meeting Planner//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${dtstamp}`,
+    `DTSTART:${formatICSDate(utcStart)}`,
+    `DTEND:${formatICSDate(utcEnd)}`,
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${description.replace(/\n/g, '\\n')}`,
+    `LOCATION:${location}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+    '',
+  ].join('\r\n');
+};
+
+const parseOffsetsFromQuery = (value) => {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map((v) => Number(v))
+    .filter((n) => !Number.isNaN(n));
 };
 
 const toHHMM = (minutes) => {
@@ -80,11 +137,7 @@ const findOverlapSlots = (timezones, durationMinutes) => {
 
 export default function TimezoneConverter() {
   const [activeView, setActiveView] = useState('world');
-  const [selectedTimezones, setSelectedTimezones] = useState([
-    { v: -5, l: 'UTC-5 (New York)' },
-    { v: 0, l: 'UTC (London)' },
-    { v: 5.5, l: 'UTC+5:30 (New Delhi)' },
-  ]);
+  const [selectedTimezones, setSelectedTimezones] = useState(defaultTimezones);
 
   const [favorites, setFavorites] = useState(() => {
     try {
@@ -102,12 +155,68 @@ export default function TimezoneConverter() {
   const [converterTo, setConverterTo] = useState(0);
   const [converterTime, setConverterTime] = useState('09:00');
   const [meetingDate, setMeetingDate] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    return getTodayISO();
   });
   const [meetingHostOffset, setMeetingHostOffset] = useState(-5);
   const [meetingStart, setMeetingStart] = useState('09:00');
   const [meetingDuration, setMeetingDuration] = useState(60);
+  const [teamProfiles, setTeamProfiles] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('teamProfiles')) || [];
+    } catch {
+      return [];
+    }
+  });
+  const [profileName, setProfileName] = useState('');
+  const [profileTimezone, setProfileTimezone] = useState(-5);
+  const [profileWorkStart, setProfileWorkStart] = useState('09:00');
+  const [profileWorkEnd, setProfileWorkEnd] = useState('17:00');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view');
+    const tzParam = params.get('tz');
+    const fromParam = params.get('from');
+    const toParam = params.get('to');
+    const hostParam = params.get('host');
+    const dateParam = params.get('date');
+    const startParam = params.get('start');
+    const durationParam = params.get('duration');
+
+    if (viewParam && ['world', 'converter', 'meeting', 'overlap'].includes(viewParam)) {
+      setActiveView(viewParam);
+    }
+
+    const offsets = parseOffsetsFromQuery(tzParam)
+      .map((offset) => TIMEZONE_DATA.find((tz) => tz.v === offset))
+      .filter(Boolean);
+    if (offsets.length) {
+      setSelectedTimezones(offsets);
+    }
+
+    if (fromParam && !Number.isNaN(Number(fromParam))) setConverterFrom(Number(fromParam));
+    if (toParam && !Number.isNaN(Number(toParam))) setConverterTo(Number(toParam));
+    if (hostParam && !Number.isNaN(Number(hostParam))) setMeetingHostOffset(Number(hostParam));
+    if (dateParam) setMeetingDate(dateParam);
+    if (startParam) setMeetingStart(startParam);
+    if (durationParam && !Number.isNaN(Number(durationParam))) setMeetingDuration(Number(durationParam));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    params.set('view', activeView);
+    params.set('tz', selectedTimezones.map((tz) => tz.v).join(','));
+    params.set('from', String(converterFrom));
+    params.set('to', String(converterTo));
+    params.set('host', String(meetingHostOffset));
+    params.set('date', meetingDate);
+    params.set('start', meetingStart);
+    params.set('duration', String(meetingDuration));
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  }, [activeView, converterFrom, converterTo, meetingDate, meetingDuration, meetingHostOffset, meetingStart, selectedTimezones]);
 
   // Update time every second
   useEffect(() => {
@@ -119,6 +228,10 @@ export default function TimezoneConverter() {
   useEffect(() => {
     localStorage.setItem('favoriteTimezones', JSON.stringify(favorites));
   }, [favorites]);
+
+  useEffect(() => {
+    localStorage.setItem('teamProfiles', JSON.stringify(teamProfiles));
+  }, [teamProfiles]);
 
   // Calculate time for a timezone
   const calculateTime = (offset) => {
@@ -156,6 +269,66 @@ export default function TimezoneConverter() {
     });
   };
 
+  const addTeamProfile = () => {
+    const name = profileName.trim();
+    if (!name) return;
+    const newProfile = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      name,
+      timezone: profileTimezone,
+      workStart: profileWorkStart,
+      workEnd: profileWorkEnd,
+    };
+    setTeamProfiles((prev) => [...prev, newProfile]);
+    setProfileName('');
+  };
+
+  const removeTeamProfile = (id) => {
+    setTeamProfiles((prev) => prev.filter((profile) => profile.id !== id));
+  };
+
+  const applyTeamTimezones = () => {
+    const tzMap = new Map(selectedTimezones.map((tz) => [tz.v, tz]));
+    teamProfiles.forEach((profile) => {
+      const matched = TIMEZONE_DATA.find((tz) => tz.v === profile.timezone);
+      if (matched) tzMap.set(matched.v, matched);
+    });
+    setSelectedTimezones(Array.from(tzMap.values()));
+  };
+
+  const copyShareableLink = () => {
+    if (typeof window === 'undefined') return;
+    copyToClipboard(window.location.href, 'share-link');
+  };
+
+  const exportMeetingAsICS = () => {
+    if (!meetingDate || !meetingStart) return;
+    const { utcStart, utcEnd } = toUtcRange(meetingDate, meetingStart, meetingHostOffset, meetingDuration);
+    const ics = buildICSContent({
+      title: 'Global Team Meeting',
+      description: meetingSummary || 'Meeting scheduled from Timezone Converter planner.',
+      location: 'Online',
+      utcStart,
+      utcEnd,
+    });
+
+    if (typeof window !== 'undefined' && typeof window.URL?.createObjectURL === 'function') {
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `meeting-${meetingDate}-${meetingStart.replace(':', '')}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      setCopied('ics-export');
+      setTimeout(() => setCopied(null), 2000);
+    } else {
+      copyToClipboard(ics, 'ics-export');
+    }
+  };
+
   // Filter timezones by search
   const filteredTimezones = TIMEZONE_DATA.filter((tz) => {
     const query = searchQuery.toLowerCase();
@@ -186,18 +359,17 @@ export default function TimezoneConverter() {
       return [];
     }
 
-    const [year, month, day] = meetingDate.split('-').map(Number);
-    const utcMidnight = Date.UTC(year, (month || 1) - 1, day || 1, 0, 0, 0);
-    const startMinutes = parseHHMM(meetingStart);
-    const duration = Math.max(15, Math.min(480, Number(meetingDuration) || 60));
-    const utcStart = utcMidnight + (startMinutes - meetingHostOffset * 60) * 60000;
-    const utcEnd = utcStart + duration * 60000;
+    const { utcStart, utcEnd, duration } = toUtcRange(meetingDate, meetingStart, meetingHostOffset, meetingDuration);
+    const profileByTimezone = new Map(teamProfiles.map((profile) => [profile.timezone, profile]));
 
     return selectedTimezones.map((tz) => {
       const localStart = new Date(utcStart + tz.v * 3600000);
       const localEnd = new Date(utcEnd + tz.v * 3600000);
       const localMinutes = localStart.getUTCHours() * 60 + localStart.getUTCMinutes();
-      const inWorkHours = localMinutes >= 9 * 60 && (localMinutes + duration) <= 17 * 60;
+      const profile = profileByTimezone.get(tz.v);
+      const workStart = parseHHMM(profile?.workStart || '09:00');
+      const workEnd = parseHHMM(profile?.workEnd || '17:00');
+      const inWorkHours = localMinutes >= workStart && (localMinutes + duration) <= workEnd;
 
       return {
         key: tz.v,
@@ -206,7 +378,7 @@ export default function TimezoneConverter() {
         inWorkHours,
       };
     });
-  }, [meetingDate, meetingDuration, meetingHostOffset, meetingStart, selectedTimezones]);
+  }, [meetingDate, meetingDuration, meetingHostOffset, meetingStart, selectedTimezones, teamProfiles]);
 
   const overlapSlots = useMemo(
     () => findOverlapSlots(selectedTimezones, Math.max(15, Math.min(180, Number(meetingDuration) || 60))),
@@ -276,6 +448,11 @@ export default function TimezoneConverter() {
             ))}
           </div>
         )}
+
+        <Button onClick={copyShareableLink} variant="outline" className="gap-2" size="lg">
+          <Link2 className="w-4 h-4" />
+          {copied === 'share-link' ? 'Link Copied!' : 'Share Setup'}
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -475,6 +652,57 @@ export default function TimezoneConverter() {
             <CardTitle className="text-lg">Meeting Planner</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="rounded-md border p-3 bg-slate-50/60 dark:bg-slate-900/40">
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <p className="font-medium flex items-center gap-2"><Users className="w-4 h-4" /> Team Profiles</p>
+                <Button onClick={applyTeamTimezones} variant="outline" size="sm">
+                  Apply Team Timezones
+                </Button>
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-5">
+                <Input
+                  placeholder="Name"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                />
+                <select
+                  value={profileTimezone}
+                  onChange={(e) => setProfileTimezone(Number(e.target.value))}
+                  className="w-full rounded-md border border-input bg-transparent px-3 py-2"
+                >
+                  {TIMEZONE_DATA.map((tz) => (
+                    <option key={`profile-${tz.v}`} value={tz.v}>{tz.l}</option>
+                  ))}
+                </select>
+                <Input type="time" value={profileWorkStart} onChange={(e) => setProfileWorkStart(e.target.value)} />
+                <Input type="time" value={profileWorkEnd} onChange={(e) => setProfileWorkEnd(e.target.value)} />
+                <Button onClick={addTeamProfile} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add Member
+                </Button>
+              </div>
+
+              {teamProfiles.length > 0 && (
+                <div className="mt-3 grid gap-2">
+                  {teamProfiles.map((profile) => {
+                    const tz = TIMEZONE_DATA.find((item) => item.v === profile.timezone);
+                    return (
+                      <div key={profile.id} className="rounded border p-2 flex items-center justify-between gap-2">
+                        <div className="text-sm">
+                          <span className="font-medium">{profile.name}</span>
+                          <span className="text-gray-600 dark:text-gray-400"> · {tz?.l || `UTC${profile.timezone >= 0 ? '+' : ''}${profile.timezone}`} · {profile.workStart}-{profile.workEnd}</span>
+                        </div>
+                        <Button onClick={() => removeTeamProfile(profile.id)} variant="ghost" size="sm" className="text-red-600">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <div className="grid gap-3 md:grid-cols-4">
               <div className="space-y-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Host Timezone</p>
@@ -530,6 +758,16 @@ export default function TimezoneConverter() {
             >
               <Copy className="w-4 h-4" />
               {copied === 'meeting-summary' ? 'Summary Copied!' : 'Copy Meeting Summary'}
+            </Button>
+
+            <Button
+              onClick={exportMeetingAsICS}
+              variant="outline"
+              className="w-full md:w-auto gap-2"
+            >
+              <CalendarPlus className="w-4 h-4" />
+              <Download className="w-4 h-4" />
+              {copied === 'ics-export' ? 'ICS Ready!' : 'Export .ics Calendar Invite'}
             </Button>
           </CardContent>
         </Card>

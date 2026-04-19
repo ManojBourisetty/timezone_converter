@@ -9,6 +9,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
     // Clear localStorage before each test
     localStorage.clear();
     jest.clearAllMocks();
+    window.history.replaceState({}, '', '/');
   });
 
   test('renders title and description', () => {
@@ -151,5 +152,32 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
     await waitFor(() => {
       expect(screen.getByText(/Best Meeting Slots/i)).toBeInTheDocument();
     });
+  });
+
+  test('shows ICS export button in meeting planner', async () => {
+    render(<TimezoneConverter />);
+    fireEvent.click(screen.getByRole('button', { name: /Meeting Planner/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Export \.ics Calendar Invite/i)).toBeInTheDocument();
+    });
+  });
+
+  test('adds a team profile member', async () => {
+    render(<TimezoneConverter />);
+    fireEvent.click(screen.getByRole('button', { name: /Meeting Planner/i }));
+
+    const nameInput = await screen.findByPlaceholderText(/Name/i);
+    await userEvent.type(nameInput, 'Alex');
+    fireEvent.click(screen.getByRole('button', { name: /Add Member/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Alex/i)).toBeInTheDocument();
+    });
+  });
+
+  test('has share setup button for URL-based sharing', () => {
+    render(<TimezoneConverter />);
+    expect(screen.getByRole('button', { name: /Share Setup/i })).toBeInTheDocument();
   });
 });

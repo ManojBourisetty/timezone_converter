@@ -1,7 +1,40 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import TimezoneConverter from "./components/TimezoneConverter";
+
+function BrowserLocalTimeBar() {
+  const [now, setNow] = useState(new Date());
+  const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Local Timezone";
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const prettyTime = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }).format(now);
+
+  return (
+    <div className="sticky top-0 z-50 border-b border-cyan-100 bg-gradient-to-r from-cyan-50 via-sky-50 to-blue-50 backdrop-blur-sm">
+      <div className="max-w-6xl mx-auto px-4 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm">
+        <p className="font-semibold text-slate-700" data-testid="app-local-time-text">
+          Your local browser time: <span className="text-blue-700">{prettyTime}</span>
+        </p>
+        <p className="text-slate-600" data-testid="app-local-timezone-text">
+          Timezone: {browserTimezone}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
@@ -46,6 +79,7 @@ function App() {
     <div className="App">
       <AppErrorBoundary>
         <BrowserRouter>
+          <BrowserLocalTimeBar />
           <Routes>
             <Route path="/" element={<TimezoneConverter />} />
             <Route path="*" element={<TimezoneConverter />} />

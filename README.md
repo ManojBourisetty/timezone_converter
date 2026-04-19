@@ -17,6 +17,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Team profiles with preferred timezone + working-hour windows
 - Quick city shortcuts and favorites
 - Meeting app launch links (Google Meet/Calendar, Microsoft Teams, Zoom)
+- Responsive cross-browser layout hardening (including iPad Safari)
 
 ## Feature Highlights
 
@@ -77,6 +78,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Meeting planner UX simplified with faster defaults and shortcuts.
 - Google/Teams/Zoom meeting launch links added from planner context.
 - Team profile management moved behind an advanced toggle to reduce UI complexity for first-time use.
+- Improved responsive behavior to prevent field overlap/disorientation on tablet and Safari browsers.
 
 ## Tech Stack
 
@@ -128,6 +130,18 @@ cd frontend
 CI=true npm test -- --watchAll=false --runInBand
 npm run build
 ```
+
+## Security Audit Notes
+
+- Runtime production dependency audit can be checked with:
+
+```bash
+cd frontend
+npm audit --omit=dev
+```
+
+- Build-time tooling from Create React App (`react-scripts`) still reports known advisories in full-scope audit (`npm audit`) due upstream maintenance status.
+- These advisories are in development/build dependencies, not in shipped browser runtime dependencies.
 
 ## Notes About Deployment
 

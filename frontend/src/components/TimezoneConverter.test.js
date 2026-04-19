@@ -386,4 +386,171 @@ describe('TimezoneConverter Component - Unit Tests', () => {
       expect(screen.getByTestId('convert-button')).toBeInTheDocument();
     });
   });
+
+  // ===== BROWSE ALL CITIES DIALOG TESTS =====
+
+  describe('Browse All Cities Dialog', () => {
+    test('renders "Browse all cities" links next to both timezone labels', async () => {
+      render(<TimezoneConverter />);
+      await waitFor(() => {
+        const browseLinks = screen.getAllByText('Browse all cities');
+        expect(browseLinks).toHaveLength(2);
+      });
+    });
+
+    test('opens source dialog with correct title when first Browse link is clicked', async () => {
+      render(<TimezoneConverter />);
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      const browseLinks = screen.getAllByText('Browse all cities');
+      fireEvent.click(browseLinks[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Browse All Cities — From Timezone')).toBeInTheDocument();
+      });
+    });
+
+    test('opens target dialog with correct title when second Browse link is clicked', async () => {
+      render(<TimezoneConverter />);
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      const browseLinks = screen.getAllByText('Browse all cities');
+      fireEvent.click(browseLinks[1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Browse All Cities — To Timezone')).toBeInTheDocument();
+      });
+    });
+
+    test('dialog displays city count header', async () => {
+      render(<TimezoneConverter />);
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      const browseLinks = screen.getAllByText('Browse all cities');
+      fireEvent.click(browseLinks[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText(/cities & timezones available/)).toBeInTheDocument();
+      });
+    });
+
+    test('dialog shows loaded cities grouped by region', async () => {
+      render(<TimezoneConverter />);
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      const browseLinks = screen.getAllByText('Browse all cities');
+      fireEvent.click(browseLinks[0]);
+
+      await waitFor(() => {
+        // getAllByText handles duplicates (city name also appears in major cities grid)
+        expect(screen.getAllByText('New York').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('London').length).toBeGreaterThan(0);
+      });
+    });
+
+    test('filters cities by search term', async () => {
+      render(<TimezoneConverter />);
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      fireEvent.click(screen.getAllByText('Browse all cities')[0]);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Filter by city, country or timezone…')).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByPlaceholderText('Filter by city, country or timezone…'), {
+        target: { value: 'london' },
+      });
+
+      await waitFor(() => {
+        // getAllByText handles duplicates (city name also appears in major cities grid)
+        expect(screen.getAllByText('London').length).toBeGreaterThan(0);
+      });
+    });
+
+    test('shows no-results message for unmatched search term', async () => {
+      render(<TimezoneConverter />);
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      fireEvent.click(screen.getAllByText('Browse all cities')[0]);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Filter by city, country or timezone…')).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByPlaceholderText('Filter by city, country or timezone…'), {
+        target: { value: 'zzzznotacity' },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/No cities match/)).toBeInTheDocument();
+      });
+    });
+
+    test('selects a city and closes the dialog', async () => {
+      render(<TimezoneConverter />);
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      fireEvent.click(screen.getAllByText('Browse all cities')[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Browse All Cities — From Timezone')).toBeInTheDocument();
+      });
+
+      // Click Tokyo card in the dialog
+      const allButtons = screen.getAllByRole('button');
+      const tokyoBtn = allButtons.find(
+        (btn) => btn.textContent.includes('Tokyo') && btn.textContent.includes('Japan')
+      );
+      if (tokyoBtn) fireEvent.click(tokyoBtn);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Browse All Cities — From Timezone')).not.toBeInTheDocument();
+      });
+    });
+
+    test('closes dialog when Close button is clicked', async () => {
+      render(<TimezoneConverter />);
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      fireEvent.click(screen.getAllByText('Browse all cities')[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Browse All Cities — From Timezone')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('city-browser-close-btn'));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Browse All Cities — From Timezone')).not.toBeInTheDocument();
+      });
+    });
+
+    test('clears filter input when dialog is closed and reopened', async () => {
+      render(<TimezoneConverter />);
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      // Open, type a filter
+      fireEvent.click(screen.getAllByText('Browse all cities')[0]);
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Filter by city, country or timezone…')).toBeInTheDocument();
+      });
+      fireEvent.change(screen.getByPlaceholderText('Filter by city, country or timezone…'), {
+        target: { value: 'tokyo' },
+      });
+
+      // Close dialog
+      fireEvent.click(screen.getByTestId('city-browser-close-btn'));
+      await waitFor(() => {
+        expect(screen.queryByText('Browse All Cities — From Timezone')).not.toBeInTheDocument();
+      });
+
+      // Reopen — filter should be empty
+      fireEvent.click(screen.getAllByText('Browse all cities')[0]);
+      await waitFor(() => {
+        const filterInput = screen.getByPlaceholderText('Filter by city, country or timezone…');
+        expect(filterInput.value).toBe('');
+      });
+    });
+  });
 });

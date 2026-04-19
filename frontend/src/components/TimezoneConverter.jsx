@@ -139,7 +139,7 @@ const CityBrowserDialog = ({ open, onOpenChange, allTimezones, onSelect, label }
         </div>
 
         <DialogFooter className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex-shrink-0">
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>Close</Button>
+          <Button data-testid="city-browser-close-btn" variant="outline" onClick={() => handleOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

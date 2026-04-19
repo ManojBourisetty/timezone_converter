@@ -40,7 +40,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install backend dependencies
+        working-directory: ${{ github.workspace }}
+        run: pip install -r backend/requirements.txt
+
+      - name: Run backend security scan
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+        run: |
+          pip install bandit
+          bandit -r backend/ -f txt -ll
+
+      - name: Run backend tests
+        working-directory: ${{ github.workspace }}
+        run: python -m pytest tests/ -v
+
+      - name: Run frontend tests
         run: npm test -- --watchAll=false --runInBand
 
       - name: Build app

@@ -16,6 +16,7 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Shareable setup via URL parameters
 - Team profiles with preferred timezone + working-hour windows
 - Quick city shortcuts and favorites
+- Meeting app launch links (Google Meet/Calendar, Microsoft Teams, Zoom)
 
 ## Feature Highlights
 
@@ -34,9 +35,11 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 ### 3) Meeting Planner
 
 - Host timezone, date, time, and duration
+- Quick duration presets and "start in 30 minutes" shortcut
 - Per-timezone meeting ranges
 - Work-hours fitness badges
 - Copy meeting summary
+- Direct launch actions for Google, Teams, and Zoom scheduling flows
 
 ### 4) Best Slot Intelligence
 
@@ -58,6 +61,22 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Store members with preferred timezone and work-hour windows
 - Persisted in browser localStorage
 - One-click apply team timezones to planner
+- Advanced profile management is tucked behind a toggle for a cleaner default planner UX
+
+## Feature Update Documentation Policy
+
+- Any feature addition, behavior change, or UX change must include a README update in the same commit/PR.
+- Update at least two places when relevant:
+  - `What Is Included` for high-level capability changes
+  - `Feature Highlights` for detailed behavior changes
+- If deployment, configuration, or secrets are affected, update deployment sections in the same change.
+- If tests are added or updated for a feature, keep the README testing guidance aligned.
+
+## Recent Feature Updates
+
+- Meeting planner UX simplified with faster defaults and shortcuts.
+- Google/Teams/Zoom meeting launch links added from planner context.
+- Team profile management moved behind an advanced toggle to reduce UI complexity for first-time use.
 
 ## Tech Stack
 

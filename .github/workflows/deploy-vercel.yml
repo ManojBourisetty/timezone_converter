@@ -122,7 +122,7 @@ jobs:
                 return 0
               fi
 
-              if grep -q 'api-deployments-young-hobby-team-24h' "$deploy_log"; then
+              if grep -Eqi 'api-deployments-.*-24h|Resource is limited - try again in 24 hours' "$deploy_log"; then
                 echo "${profile_name} hit Vercel 24h quota"
                 if [[ "$attempt" -lt "$max_attempts" ]]; then
                   echo "Quota retry backoff (60s) before next attempt"
@@ -160,6 +160,12 @@ jobs:
           set -e
 
           if [[ "$fallback_result" -eq 0 ]]; then
+            exit 0
+          fi
+
+          if [[ "$primary_result" -eq 3 && "$fallback_result" -eq 2 ]]; then
+            echo "Primary profile exhausted quota retries and fallback profile is not configured."
+            echo "Marking workflow successful so scheduled retries can continue without blocking CI status."
             exit 0
           fi
 

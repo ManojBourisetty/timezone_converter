@@ -122,4 +122,34 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
     expect(screen.getByText(/Enhanced timezone converter/i)).toBeInTheDocument();
     expect(screen.getByText(/100% Client-Side/i)).toBeInTheDocument();
   });
+
+  test('opens converter view and shows conversion panels', async () => {
+    render(<TimezoneConverter />);
+    fireEvent.click(screen.getByRole('button', { name: /Time Converter/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Manual Timezone Conversion/i)).toBeInTheDocument();
+      expect(screen.getByText(/Source/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Converted/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  test('opens meeting planner and renders participant rows', async () => {
+    render(<TimezoneConverter />);
+    fireEvent.click(screen.getByRole('button', { name: /Meeting Planner/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Copy Meeting Summary/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Inside Work Hours|Outside Work Hours/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  test('opens best slots view', async () => {
+    render(<TimezoneConverter />);
+    fireEvent.click(screen.getByRole('button', { name: /Best Slots/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Best Meeting Slots/i)).toBeInTheDocument();
+    });
+  });
 });

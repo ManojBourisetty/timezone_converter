@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { Clock, Copy, Heart, Star, Plus, Search, X } from 'lucide-react';
+import { ArrowRight, Briefcase, Clock, Copy, Heart, Plus, Search, Sparkles, Star, X } from 'lucide-react';
 import { TIMEZONE_DATA, MAJOR_CITIES } from '../data/timezoneData';
 
 // ============================================================================
@@ -30,11 +30,56 @@ const formatDate = (date) => {
   return `${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
 };
 
+const parseHHMM = (hhmm) => {
+  const [h, m] = (hhmm || '00:00').split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) {
+    return 0;
+  }
+  return h * 60 + m;
+};
+
+const toHHMM = (minutes) => {
+  const normalized = ((minutes % 1440) + 1440) % 1440;
+  return `${pad(Math.floor(normalized / 60))}:${pad(normalized % 60)}`;
+};
+
+const getDateShift = (fromDate, toDate) => {
+  const baseFrom = Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate());
+  const baseTo = Date.UTC(toDate.getUTCFullYear(), toDate.getUTCMonth(), toDate.getUTCDate());
+  const diffDays = Math.round((baseTo - baseFrom) / 86400000);
+
+  if (diffDays > 0) return ' (next day)';
+  if (diffDays < 0) return ' (previous day)';
+  return '';
+};
+
+const findOverlapSlots = (timezones, durationMinutes) => {
+  const slots = [];
+  if (!timezones.length || durationMinutes <= 0) {
+    return slots;
+  }
+
+  for (let utcMinute = 0; utcMinute < 24 * 60; utcMinute += 30) {
+    const fits = timezones.every((tz) => {
+      const localStart = ((utcMinute + tz.v * 60) % 1440 + 1440) % 1440;
+      const localEnd = localStart + durationMinutes;
+      return localStart >= 9 * 60 && localEnd <= 17 * 60;
+    });
+
+    if (fits) {
+      slots.push(utcMinute);
+    }
+  }
+
+  return slots.slice(0, 8);
+};
+
 // ============================================================================
 // Main Component
 // ============================================================================
 
 export default function TimezoneConverter() {
+  const [activeView, setActiveView] = useState('world');
   const [selectedTimezones, setSelectedTimezones] = useState([
     { v: -5, l: 'UTC-5 (New York)' },
     { v: 0, l: 'UTC (London)' },
@@ -53,6 +98,16 @@ export default function TimezoneConverter() {
   const [searchQuery, setSearchQuery] = useState('');
   const [time, setTime] = useState(new Date());
   const [copied, setCopied] = useState(null);
+  const [converterFrom, setConverterFrom] = useState(-5);
+  const [converterTo, setConverterTo] = useState(0);
+  const [converterTime, setConverterTime] = useState('09:00');
+  const [meetingDate, setMeetingDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  });
+  const [meetingHostOffset, setMeetingHostOffset] = useState(-5);
+  const [meetingStart, setMeetingStart] = useState('09:00');
+  const [meetingDuration, setMeetingDuration] = useState(60);
 
   // Update time every second
   useEffect(() => {
@@ -109,6 +164,64 @@ export default function TimezoneConverter() {
 
   const isFavorite = (offset) => favorites.some((f) => f.v === offset);
 
+  const converterResult = useMemo(() => {
+    const inputMinutes = parseHHMM(converterTime);
+    const now = new Date();
+    const utcMidnight = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const utcMoment = utcMidnight + (inputMinutes - converterFrom * 60) * 60000;
+
+    const fromDate = new Date(utcMoment + converterFrom * 3600000);
+    const toDate = new Date(utcMoment + converterTo * 3600000);
+
+    return {
+      fromDate,
+      toDate,
+      fromText: `${formatDate(fromDate)} · ${formatTimeOnly(fromDate)}`,
+      toText: `${formatDate(toDate)} · ${formatTimeOnly(toDate)}${getDateShift(fromDate, toDate)}`,
+    };
+  }, [converterFrom, converterTo, converterTime]);
+
+  const meetingRows = useMemo(() => {
+    if (!meetingDate || !meetingStart) {
+      return [];
+    }
+
+    const [year, month, day] = meetingDate.split('-').map(Number);
+    const utcMidnight = Date.UTC(year, (month || 1) - 1, day || 1, 0, 0, 0);
+    const startMinutes = parseHHMM(meetingStart);
+    const duration = Math.max(15, Math.min(480, Number(meetingDuration) || 60));
+    const utcStart = utcMidnight + (startMinutes - meetingHostOffset * 60) * 60000;
+    const utcEnd = utcStart + duration * 60000;
+
+    return selectedTimezones.map((tz) => {
+      const localStart = new Date(utcStart + tz.v * 3600000);
+      const localEnd = new Date(utcEnd + tz.v * 3600000);
+      const localMinutes = localStart.getUTCHours() * 60 + localStart.getUTCMinutes();
+      const inWorkHours = localMinutes >= 9 * 60 && (localMinutes + duration) <= 17 * 60;
+
+      return {
+        key: tz.v,
+        timezoneLabel: tz.l,
+        rangeText: `${formatDate(localStart)} ${formatTimeOnly(localStart)} - ${formatTimeOnly(localEnd)}`,
+        inWorkHours,
+      };
+    });
+  }, [meetingDate, meetingDuration, meetingHostOffset, meetingStart, selectedTimezones]);
+
+  const overlapSlots = useMemo(
+    () => findOverlapSlots(selectedTimezones, Math.max(15, Math.min(180, Number(meetingDuration) || 60))),
+    [meetingDuration, selectedTimezones]
+  );
+
+  const meetingSummary = useMemo(() => {
+    if (!meetingRows.length) {
+      return '';
+    }
+    return meetingRows
+      .map((row) => `${row.timezoneLabel}: ${row.rangeText}${row.inWorkHours ? ' [work-hours]' : ' [off-hours]'}`)
+      .join('\n');
+  }, [meetingRows]);
+
   return (
     <div className="w-full max-w-6xl mx-auto p-4 space-y-6">
       {/* HEADER */}
@@ -117,7 +230,7 @@ export default function TimezoneConverter() {
           ⏰ Timezone Converter
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Compare multiple timezones in real-time with favorites and advanced features
+          Compare multiple timezones in real-time, convert times, and plan global meetings
         </p>
       </div>
 
@@ -165,102 +278,297 @@ export default function TimezoneConverter() {
         )}
       </div>
 
-      {/* TIMEZONE CARDS GRID */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {selectedTimezones.map((tz) => {
-          const tzTime = calculateTime(tz.v);
-          const formattedTime = formatTime12(tzTime);
-          const formattedDate = formatDate(tzTime);
-          const timeOnly = formatTimeOnly(tzTime);
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <Button
+          variant={activeView === 'world' ? 'default' : 'outline'}
+          onClick={() => setActiveView('world')}
+          className="w-full"
+        >
+          World Clock
+        </Button>
+        <Button
+          variant={activeView === 'converter' ? 'default' : 'outline'}
+          onClick={() => setActiveView('converter')}
+          className="w-full"
+        >
+          Time Converter
+        </Button>
+        <Button
+          variant={activeView === 'meeting' ? 'default' : 'outline'}
+          onClick={() => setActiveView('meeting')}
+          className="w-full gap-2"
+        >
+          <Briefcase className="w-4 h-4" />
+          Meeting Planner
+        </Button>
+        <Button
+          variant={activeView === 'overlap' ? 'default' : 'outline'}
+          onClick={() => setActiveView('overlap')}
+          className="w-full gap-2"
+        >
+          <Sparkles className="w-4 h-4" />
+          Best Slots
+        </Button>
+      </div>
 
-          return (
-            <Card key={tz.v} className="relative overflow-hidden hover:shadow-lg transition-shadow">
-              {/* Gradient background indicator */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+      {activeView === 'world' && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {selectedTimezones.map((tz) => {
+            const tzTime = calculateTime(tz.v);
+            const formattedTime = formatTime12(tzTime);
+            const formattedDate = formatDate(tzTime);
+            const timeOnly = formatTimeOnly(tzTime);
 
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{tz.l}</CardTitle>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {MAJOR_CITIES.find((c) => c.timezone === tz.v)?.city || 'Region'}
-                    </p>
-                  </div>
+            return (
+              <Card key={tz.v} className="relative overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
 
-                  <div className="flex gap-1">
-                    {/* Favorite button */}
-                    <Button
-                      onClick={() => toggleFavorite(tz.v)}
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                    >
-                      {isFavorite(tz.v) ? (
-                        <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-                      ) : (
-                        <Heart className="w-4 h-4 text-gray-400" />
-                      )}
-                    </Button>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{tz.l}</CardTitle>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {MAJOR_CITIES.find((c) => c.timezone === tz.v)?.city || 'Region'}
+                      </p>
+                    </div>
 
-                    {/* Delete button */}
-                    {selectedTimezones.length > 1 && (
+                    <div className="flex gap-1">
                       <Button
-                        onClick={() => removeTimezone(tz.v)}
+                        onClick={() => toggleFavorite(tz.v)}
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                        className="h-8 w-8 p-0"
                       >
-                        <X className="w-4 h-4" />
+                        {isFavorite(tz.v) ? (
+                          <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+                        ) : (
+                          <Heart className="w-4 h-4 text-gray-400" />
+                        )}
                       </Button>
-                    )}
+
+                      {selectedTimezones.length > 1 && (
+                        <Button
+                          onClick={() => removeTimezone(tz.v)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 p-4 rounded-lg">
+                    <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{timeOnly}</div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{formattedDate}</p>
+                  </div>
+
+                  <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-sm font-mono">
+                    <div className="text-gray-700 dark:text-gray-300">{formattedTime}</div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => copyToClipboard(formattedTime, `time-${tz.v}`)}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1"
+                    >
+                      <Copy className="w-4 h-4" />
+                      {copied === `time-${tz.v}` ? 'Copied!' : 'Time'}
+                    </Button>
+
+                    <Button
+                      onClick={() => copyToClipboard(formattedDate, `date-${tz.v}`)}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1"
+                    >
+                      <Copy className="w-4 h-4" />
+                      {copied === `date-${tz.v}` ? 'Copied!' : 'Date'}
+                    </Button>
+                  </div>
+
+                  <Badge variant="secondary" className="w-full justify-center">
+                    Offset: {tz.v > 0 ? '+' : ''}{tz.v} hours from UTC
+                  </Badge>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {activeView === 'converter' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Manual Timezone Conversion</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">From Timezone</p>
+                <select
+                  value={converterFrom}
+                  onChange={(e) => setConverterFrom(Number(e.target.value))}
+                  className="w-full rounded-md border border-input bg-transparent px-3 py-2"
+                >
+                  {TIMEZONE_DATA.map((tz) => (
+                    <option key={`from-${tz.v}`} value={tz.v}>{tz.l}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Input Time</p>
+                <Input type="time" value={converterTime} onChange={(e) => setConverterTime(e.target.value)} />
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">To Timezone</p>
+                <select
+                  value={converterTo}
+                  onChange={(e) => setConverterTo(Number(e.target.value))}
+                  className="w-full rounded-md border border-input bg-transparent px-3 py-2"
+                >
+                  {TIMEZONE_DATA.map((tz) => (
+                    <option key={`to-${tz.v}`} value={tz.v}>{tz.l}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Copy Result</p>
+                <Button
+                  onClick={() => copyToClipboard(converterResult.toText, 'converter-result')}
+                  className="w-full gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  {copied === 'converter-result' ? 'Copied!' : 'Copy Converted'}
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg border p-4">
+                <p className="text-sm text-gray-500 mb-1">Source</p>
+                <p className="font-semibold text-lg">{converterResult.fromText}</p>
+              </div>
+              <div className="rounded-lg border p-4 bg-blue-50/60 dark:bg-blue-950/30">
+                <p className="text-sm text-gray-500 mb-1">Converted</p>
+                <p className="font-semibold text-lg flex items-center gap-2">
+                  <ArrowRight className="w-4 h-4 text-blue-600" />
+                  {converterResult.toText}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeView === 'meeting' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Meeting Planner</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Host Timezone</p>
+                <select
+                  value={meetingHostOffset}
+                  onChange={(e) => setMeetingHostOffset(Number(e.target.value))}
+                  className="w-full rounded-md border border-input bg-transparent px-3 py-2"
+                >
+                  {selectedTimezones.map((tz) => (
+                    <option key={`host-${tz.v}`} value={tz.v}>{tz.l}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Date</p>
+                <Input type="date" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Start Time</p>
+                <Input type="time" value={meetingStart} onChange={(e) => setMeetingStart(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Duration (minutes)</p>
+                <Input
+                  type="number"
+                  min={15}
+                  max={480}
+                  step={15}
+                  value={meetingDuration}
+                  onChange={(e) => setMeetingDuration(Number(e.target.value))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {meetingRows.map((row) => (
+                <div key={row.key} className="rounded-md border p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{row.timezoneLabel}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{row.rangeText}</p>
+                  </div>
+                  <Badge variant={row.inWorkHours ? 'secondary' : 'outline'}>
+                    {row.inWorkHours ? 'Inside Work Hours' : 'Outside Work Hours'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              onClick={() => copyToClipboard(meetingSummary, 'meeting-summary')}
+              variant="outline"
+              className="w-full md:w-auto gap-2"
+            >
+              <Copy className="w-4 h-4" />
+              {copied === 'meeting-summary' ? 'Summary Copied!' : 'Copy Meeting Summary'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeView === 'overlap' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Best Meeting Slots (9AM-5PM Overlap)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Suggested slots are based on overlap where everyone is inside 9:00 AM to 5:00 PM local working hours.
+            </p>
+
+            {overlapSlots.length === 0 && (
+              <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm">
+                No overlap found for the current group and duration. Try reducing duration or removing one timezone.
+              </div>
+            )}
+
+            <div className="grid gap-3">
+              {overlapSlots.map((utcMinute) => (
+                <div key={utcMinute} className="rounded-md border p-3">
+                  <p className="font-semibold mb-2">UTC Slot: {toHHMM(utcMinute)} - {toHHMM(utcMinute + Math.max(15, Math.min(180, Number(meetingDuration) || 60)))}</p>
+                  <div className="grid md:grid-cols-2 gap-2 text-sm">
+                    {selectedTimezones.map((tz) => (
+                      <div key={`${utcMinute}-${tz.v}`} className="rounded border border-dashed px-2 py-1">
+                        <span className="font-medium">{tz.l}</span>
+                        <span className="text-gray-600 dark:text-gray-400">: {toHHMM(utcMinute + tz.v * 60)} - {toHHMM(utcMinute + tz.v * 60 + Math.max(15, Math.min(180, Number(meetingDuration) || 60)))}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Time display */}
-                <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 p-4 rounded-lg">
-                  <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{timeOnly}</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{formattedDate}</p>
-                </div>
-
-                {/* Full datetime display */}
-                <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-sm font-mono">
-                  <div className="text-gray-700 dark:text-gray-300">{formattedTime}</div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => copyToClipboard(formattedTime, `time-${tz.v}`)}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 gap-1"
-                  >
-                    <Copy className="w-4 h-4" />
-                    {copied === `time-${tz.v}` ? 'Copied!' : 'Time'}
-                  </Button>
-
-                  <Button
-                    onClick={() => copyToClipboard(formattedDate, `date-${tz.v}`)}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 gap-1"
-                  >
-                    <Copy className="w-4 h-4" />
-                    {copied === `date-${tz.v}` ? 'Copied!' : 'Date'}
-                  </Button>
-                </div>
-
-                {/* Time offset badge */}
-                <Badge variant="secondary" className="w-full justify-center">
-                  Offset: {tz.v > 0 ? '+' : ''}{tz.v} hours from UTC
-                </Badge>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick city shortcuts */}
       <Card>
@@ -335,7 +643,7 @@ export default function TimezoneConverter() {
 
       {/* Footer */}
       <div className="text-center text-sm text-gray-500 dark:text-gray-400 pt-6 border-t">
-        <p>✨ Enhanced timezone converter with favorites, real-time updates, and copy-to-clipboard • 100% Client-Side</p>
+        <p>✨ Enhanced timezone converter with world clock, conversion, meeting planner, and best-slot intelligence • 100% Client-Side</p>
       </div>
     </div>
   );

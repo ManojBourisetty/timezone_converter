@@ -24,6 +24,8 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Browser local time banner now reflects the user's real device/browser timezone
 - World clock city times are DST-aware for regional timezones like New York and London
 - Top-level navigation refined into a clearer professional tabbed tool switcher
+- Navigation stack stays sticky on scroll so tool switching remains reachable on longer pages
+- Active tool panels use subtle transitions for smoother section changes
 
 ## Feature Highlights
 
@@ -90,6 +92,8 @@ A modern multi-tool timezone productivity app with world clocks, manual conversi
 - Quick city selection no longer jumps away while adding multiple cities from the shortcut grid.
 - Fixed incorrect browser-local and regional world-clock time rendering by using timezone-aware display formatting.
 - Refined page navigation for a cleaner professional tool-switching experience.
+- Kept the local-time banner and tool navigation accessible during scroll with a sticky top stack.
+- Added lighter motion and tighter header spacing so the interface feels more cohesive.
 
 ## User Data Scope
 

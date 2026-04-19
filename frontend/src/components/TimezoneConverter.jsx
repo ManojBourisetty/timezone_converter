@@ -208,6 +208,7 @@ const findOverlapSlots = (timezones, durationMinutes) => {
 
 export default function TimezoneConverter() {
   const [activeView, setActiveView] = useState('world');
+  const [isViewVisible, setIsViewVisible] = useState(false);
   const [selectedTimezones, setSelectedTimezones] = useState(defaultTimezones);
   const quickCityButtonRefs = useRef({});
 
@@ -307,6 +308,21 @@ export default function TimezoneConverter() {
   useEffect(() => {
     localStorage.setItem('teamProfiles', JSON.stringify(teamProfiles));
   }, [teamProfiles]);
+
+  useEffect(() => {
+    setIsViewVisible(false);
+
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      setIsViewVisible(true);
+      return undefined;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      setIsViewVisible(true);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeView]);
 
   // Handle adding timezone
   const addTimezone = (tz) => {
@@ -544,31 +560,19 @@ export default function TimezoneConverter() {
   ];
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-3 sm:p-4 md:p-5 space-y-5 md:space-y-6 overflow-x-hidden">
+    <div className="w-full max-w-6xl mx-auto p-3 sm:p-4 md:p-5 space-y-4 md:space-y-5 overflow-x-hidden">
       {/* HEADER */}
-      <div className="text-center space-y-2">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+      <div className="text-center space-y-2.5 py-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">
+          Global Scheduling Toolkit
+        </p>
+        <h1 className="text-3xl sm:text-4xl md:text-[2.7rem] font-semibold tracking-tight leading-none bg-gradient-to-r from-blue-600 via-sky-600 to-indigo-600 bg-clip-text text-transparent">
           ⏰ Timezone Converter
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="mx-auto max-w-2xl text-sm sm:text-base text-slate-600 dark:text-slate-400">
           Compare multiple timezones in real-time, convert times, and plan global meetings
         </p>
       </div>
-
-      {/* BROWSER LOCAL TIME BAR (Sticky) */}
-      <Card className="sticky top-0 z-10 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-green-700 dark:text-green-300">Your Browser Local Time</p>
-              <p className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-100 break-words">
-                {formatDisplayDate(time)} · {formatDisplayTime(time)}
-              </p>
-            </div>
-            <Clock className="w-8 h-8 text-green-600 shrink-0" />
-          </div>
-        </CardContent>
-      </Card>
 
       {/* CONTROLS */}
       <div className="flex flex-col lg:flex-row gap-3">
@@ -604,51 +608,79 @@ export default function TimezoneConverter() {
         </Button>
       </div>
 
-      <Card className="border-slate-200/80 bg-white/90 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
-        <CardContent className="p-2">
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-2" role="tablist" aria-label="Timezone tools navigation">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeView === item.key;
+      <div className="sticky top-0 z-20 space-y-3 pb-1">
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 shadow-sm dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-green-700 dark:text-green-300">Your Browser Local Time</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-100 break-words">
+                  {formatDisplayDate(time)} · {formatDisplayTime(time)}
+                </p>
+              </div>
+              <Clock className="w-8 h-8 text-green-600 shrink-0" />
+            </div>
+          </CardContent>
+        </Card>
 
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => setActiveView(item.key)}
-                  className={[
-                    'w-full rounded-xl border px-3 py-3 text-left transition-all duration-150',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                    isActive
-                      ? 'border-slate-900 bg-slate-900 text-white shadow-md dark:border-slate-100 dark:bg-slate-100 dark:text-slate-950'
-                      : 'border-slate-200 bg-slate-50/70 text-slate-700 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
-                  ].join(' ')}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={[
-                      'mt-0.5 rounded-lg p-2',
-                      isActive ? 'bg-white/15 dark:bg-slate-900/15' : 'bg-white dark:bg-slate-800',
-                    ].join(' ')}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold leading-none">{item.label}</div>
+        <Card className="border-slate-200/80 bg-white/90 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
+          <CardContent className="p-2">
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-2" role="tablist" aria-label="Timezone tools navigation">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeView === item.key;
+
+                return (
+                  <button
+                    key={item.key}
+                    id={`tool-tab-${item.key}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls="tool-view-panel"
+                    onClick={() => setActiveView(item.key)}
+                    className={[
+                      'w-full rounded-xl border px-3 py-3 text-left transition-all duration-200 ease-out',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      isActive
+                        ? 'border-slate-900 bg-slate-900 text-white shadow-md dark:border-slate-100 dark:bg-slate-100 dark:text-slate-950'
+                        : 'border-slate-200 bg-slate-50/70 text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-start gap-3">
                       <div className={[
-                        'mt-1 text-xs',
-                        isActive ? 'text-slate-200 dark:text-slate-700' : 'text-slate-500 dark:text-slate-400',
+                        'mt-0.5 rounded-lg p-2 transition-colors duration-200',
+                        isActive ? 'bg-white/15 dark:bg-slate-900/15' : 'bg-white dark:bg-slate-800',
                       ].join(' ')}>
-                        {item.hint}
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold leading-none">{item.label}</div>
+                        <div className={[
+                          'mt-1 text-xs transition-colors duration-200',
+                          isActive ? 'text-slate-200 dark:text-slate-700' : 'text-slate-500 dark:text-slate-400',
+                        ].join(' ')}>
+                          {item.hint}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div
+        id="tool-view-panel"
+        role="tabpanel"
+        aria-labelledby={`tool-tab-${activeView}`}
+        className={[
+          'transition-all duration-200 ease-out motion-reduce:transition-none',
+          isViewVisible ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0',
+        ].join(' ')}
+      >
 
       {activeView === 'world' && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -1026,6 +1058,7 @@ export default function TimezoneConverter() {
           </CardContent>
         </Card>
       )}
+      </div>
 
       {/* Quick city shortcuts */}
       <Card>

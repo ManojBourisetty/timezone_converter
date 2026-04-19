@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, CalendarClock, Clock3, Globe2, Share2, Sparkles } from 'lucide-react';
 
 const featureCards = [
@@ -32,7 +32,49 @@ const featureCards = [
   },
 ];
 
+const heroCities = [
+  { name: 'New York', timeZone: 'America/New_York' },
+  { name: 'London', timeZone: 'Europe/London' },
+  { name: 'Tokyo', timeZone: 'Asia/Tokyo' },
+];
+
+const formatCityTime = (date, timeZone) => {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date);
+};
+
+const formatCityDate = (date, timeZone) => {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  }).format(date);
+};
+
 function LandingPage() {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const cityTimeRows = useMemo(() => {
+    return heroCities.map((city) => ({
+      ...city,
+      timeText: formatCityTime(now, city.timeZone),
+      dateText: formatCityDate(now, city.timeZone),
+    }));
+  }, [now]);
+
   return (
     <div className="landing-shell min-h-screen text-slate-100">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
@@ -82,6 +124,16 @@ function LandingPage() {
                 Explore Features
               </a>
             </div>
+
+            <div className="landing-clock-strip grid gap-2 rounded-2xl border border-white/12 bg-white/[0.04] p-3 backdrop-blur-sm sm:grid-cols-3">
+              {cityTimeRows.map((city) => (
+                <div key={city.name} className="landing-clock-chip rounded-xl border border-white/10 bg-slate-950/45 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200/75">{city.name}</p>
+                  <p className="mt-1 text-base font-semibold text-white">{city.timeText}</p>
+                  <p className="text-xs text-slate-300/85">{city.dateText}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="relative mx-auto h-[22rem] w-full max-w-md">
@@ -95,10 +147,10 @@ function LandingPage() {
               </div>
             </div>
             <div className="absolute left-5 top-7 rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-xs text-slate-200">
-              New York 11:30 AM
+              {cityTimeRows[0].name} {cityTimeRows[0].timeText}
             </div>
             <div className="absolute bottom-9 right-6 rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-xs text-slate-200">
-              Tokyo 12:30 AM
+              {cityTimeRows[2].name} {cityTimeRows[2].timeText}
             </div>
           </div>
         </section>

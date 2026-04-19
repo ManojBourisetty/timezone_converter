@@ -19,6 +19,7 @@ Includes a dedicated landing homepage at `/` and the interactive timezone worksp
 - Shareable setup via URL parameters
 - Shareable setup now preserves exact city identities for quick-city selections, not just raw UTC offsets
 - Stylish landing homepage with animated globe/time motif, feature sections, and quick-start CTAs into app views
+- Landing hero now includes a live multi-city clock strip so users see real-time timezone value before opening the workspace
 - Team profiles with preferred timezone + working-hour windows
 - Quick city shortcuts and favorites
 - Quick city buttons now toggle selected cities on and off directly

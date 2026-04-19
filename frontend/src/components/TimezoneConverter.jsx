@@ -341,7 +341,28 @@ const TimezoneConverter = () => {
     const fetchTimezones = async () => {
       try {
         const response = await axios.get(`${API}/timezones`);
-        setAllTimezones(response.data);
+        const rawTimezones = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data?.timezones)
+            ? response.data.timezones
+            : [];
+
+        const sanitizedTimezones = rawTimezones
+          .filter((tz) => tz && typeof tz === 'object' && typeof tz.value === 'string')
+          .map((tz) => ({
+            value: tz.value,
+            label: tz.label || tz.value,
+            city: tz.city || tz.value.split('/').pop()?.replace(/_/g, ' ') || tz.value,
+            country: tz.country || 'Unknown',
+            offset: tz.offset || 'UTC',
+          }));
+
+        if (sanitizedTimezones.length > 0) {
+          setAllTimezones(sanitizedTimezones);
+          return;
+        }
+
+        throw new Error('Timezone payload missing valid entries');
       } catch (error) {
         console.error('Error fetching timezones:', error);
         setAllTimezones([
@@ -358,9 +379,26 @@ const TimezoneConverter = () => {
     const fetchMajorCities = async () => {
       try {
         const response = await axios.get(`${API}/major-cities-time`);
-        setMajorCitiesData(response.data.cities);
+        const rawCities = Array.isArray(response.data?.cities)
+          ? response.data.cities
+          : Array.isArray(response.data)
+            ? response.data
+            : [];
+
+        const sanitizedCities = rawCities
+          .filter((city) => city && typeof city === 'object')
+          .map((city, idx) => ({
+            city: typeof city.city === 'string' ? city.city : 'Unknown',
+            formatted: typeof city.formatted === 'string' ? city.formatted : '--',
+            date: typeof city.date === 'string' ? city.date : '',
+            timezone: typeof city.timezone === 'string' ? city.timezone : `unknown-${idx}`,
+            offset: typeof city.offset === 'string' ? city.offset : 'UTC',
+          }));
+
+        setMajorCitiesData(sanitizedCities);
       } catch (error) {
         console.error('Error fetching major cities time:', error);
+        setMajorCitiesData([]);
       }
     };
     fetchMajorCities();

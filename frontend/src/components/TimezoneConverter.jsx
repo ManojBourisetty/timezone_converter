@@ -1301,8 +1301,13 @@ export default function TimezoneConverter({ theme = 'light', onToggleTheme = () 
       </Dialog>
 
       {/* Footer */}
-      <div className="text-center text-sm text-gray-500 dark:text-gray-400 pt-6 border-t">
-        <p>✨ Enhanced timezone converter with world clock, conversion, meeting planner, and best-slot intelligence • 100% Client-Side</p>
+      <div className="text-center text-sm text-gray-500 dark:text-gray-400 pt-6 border-t space-y-1">
+        <p>✨ Enhanced timezone converter with world clock, conversion, meeting planner, and best-slot intelligence · 100% Client-Side</p>
+        <p className="text-xs">
+          © {new Date().getFullYear()} <span className="font-semibold text-slate-700 dark:text-slate-300">Manoj Bourisetty</span>. All rights reserved.
+          {' '}· MIT License ·{' '}
+          Powered by <span className="font-medium bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-transparent">GitHub Copilot AI</span>
+        </p>
       </div>
     </div>
   );

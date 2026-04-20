@@ -201,6 +201,12 @@ function LandingPage({ theme = 'light', onToggleTheme = () => {} }) {
           </div>
         </section>
       </main>
+
+      {/* Footer */}
+      <footer className="mt-16 border-t border-slate-200/60 dark:border-slate-800/60 py-8 text-center text-xs text-slate-500 dark:text-slate-500 space-y-1">
+        <p>© {new Date().getFullYear()} <span className="font-semibold text-slate-700 dark:text-slate-300">Manoj Bourisetty</span>. All rights reserved.</p>
+        <p>Licensed under the <span className="font-medium">MIT License</span> · Powered by <span className="font-medium bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-transparent">GitHub Copilot AI</span></p>
+      </footer>
     </div>
   );
 }

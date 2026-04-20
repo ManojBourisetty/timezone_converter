@@ -1,5 +1,13 @@
 .landing-shell {
     background:
+        radial-gradient(circle at 8% 10%, rgba(34, 211, 238, 0.18), transparent 24%),
+        radial-gradient(circle at 92% 14%, rgba(192, 132, 252, 0.16), transparent 28%),
+        radial-gradient(circle at 52% 120%, rgba(45, 212, 191, 0.16), transparent 35%),
+        linear-gradient(160deg, #ecfeff 0%, #eff6ff 45%, #f8fafc 100%);
+}
+
+.dark .landing-shell {
+    background:
         radial-gradient(circle at 8% 10%, rgba(34, 211, 238, 0.25), transparent 24%),
         radial-gradient(circle at 92% 14%, rgba(192, 132, 252, 0.22), transparent 28%),
         radial-gradient(circle at 52% 120%, rgba(45, 212, 191, 0.2), transparent 35%),
@@ -75,6 +83,10 @@
 
 .landing-clock-chip:hover {
     transform: translateY(-2px);
+    border-color: rgba(125, 211, 252, 0.45);
+}
+
+.dark .landing-clock-chip:hover {
     border-color: rgba(125, 211, 252, 0.45);
 }
 

@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { ArrowRight, Briefcase, CalendarPlus, Clock, Copy, Download, Heart, Link2, Plus, Search, Sparkles, Star, Trash2, Users, X } from 'lucide-react';
+import { ArrowRight, Briefcase, CalendarPlus, Clock, Copy, Download, Heart, Link2, Moon, Plus, Search, Sparkles, Star, Sun, Trash2, Users, X } from 'lucide-react';
 import { TIMEZONE_DATA, MAJOR_CITIES } from '../data/timezoneData';
 
 // ============================================================================
@@ -259,7 +259,7 @@ const findOverlapSlots = (timezones, durationMinutes) => {
 // Main Component
 // ============================================================================
 
-export default function TimezoneConverter() {
+export default function TimezoneConverter({ theme = 'light', onToggleTheme = () => {} }) {
   const [activeView, setActiveView] = useState('world');
   const [isViewVisible, setIsViewVisible] = useState(false);
   const [isTopStackPinned, setIsTopStackPinned] = useState(false);
@@ -663,6 +663,17 @@ export default function TimezoneConverter() {
 
       {/* HEADER */}
       <div className="text-center space-y-3 py-2">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300/80 bg-white/85 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/85 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-300" /> : <Moon className="h-4 w-4 text-indigo-600" />}
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
+        </div>
         <div className="inline-flex items-center rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-400">
           Global Scheduling Toolkit
         </div>

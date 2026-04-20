@@ -20,6 +20,8 @@ Includes a dedicated landing homepage at `/` and the interactive timezone worksp
 - Shareable setup now preserves exact city identities for quick-city selections, not just raw UTC offsets
 - Stylish landing homepage with animated globe/time motif, feature sections, and quick-start CTAs into app views
 - Landing hero now includes a live multi-city clock strip so users see real-time timezone value before opening the workspace
+- Stylish dark/light mode toggle is available on both landing page and workspace, with saved user preference
+- Landing and app views now share a consistent color palette across both light and dark themes
 - Team profiles with preferred timezone + working-hour windows
 - Quick city shortcuts and favorites
 - Quick city buttons now toggle selected cities on and off directly
@@ -102,6 +104,7 @@ Includes a dedicated landing homepage at `/` and the interactive timezone worksp
 - Quick city access now toggles cities off directly instead of requiring removal from world clock cards.
 - Quick city selection no longer jumps away while adding multiple cities from the shortcut grid.
 - Fixed incorrect browser-local and regional world-clock time rendering by using timezone-aware display formatting.
+- Added a user-controlled dark/light mode toggle with persisted preference across routes.
 - Refined page navigation for a cleaner professional tool-switching experience.
 - Kept the local-time banner and tool navigation accessible during scroll with a sticky top stack.
 - Added lighter motion and tighter header spacing so the interface feels more cohesive.

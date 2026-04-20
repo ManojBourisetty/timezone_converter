@@ -4,6 +4,23 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import TimezoneConverter from "./components/TimezoneConverter";
 import LandingPage from "./components/LandingPage";
 
+const THEME_STORAGE_KEY = "timezone_theme_preference";
+
+const getInitialTheme = () => {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (storedTheme === "light" || storedTheme === "dark") {
+    return storedTheme;
+  }
+
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+};
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -43,14 +60,29 @@ class AppErrorBoundary extends React.Component {
 }
 
 function App() {
+  const [theme, setTheme] = React.useState(getInitialTheme);
+
+  React.useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = React.useCallback(() => {
+    setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
+  }, []);
+
   return (
     <div className="App">
       <AppErrorBoundary>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/app" element={<TimezoneConverter />} />
-            <Route path="*" element={<LandingPage />} />
+            <Route path="/" element={<LandingPage theme={theme} onToggleTheme={toggleTheme} />} />
+            <Route path="/app" element={<TimezoneConverter theme={theme} onToggleTheme={toggleTheme} />} />
+            <Route path="*" element={<LandingPage theme={theme} onToggleTheme={toggleTheme} />} />
           </Routes>
         </BrowserRouter>
       </AppErrorBoundary>

@@ -1,8 +1,12 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import TimezoneConverter from './TimezoneConverter';
+
+const renderWithRouter = (ui, { initialEntries = ['/app'] } = {}) =>
+  render(<MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>);
 
 describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   beforeEach(() => {
@@ -13,31 +17,31 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('renders title and description', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     expect(screen.getByRole('heading', { name: /Timezone Converter/i })).toBeInTheDocument();
     expect(screen.getByText(/Compare multiple timezones/i)).toBeInTheDocument();
   });
 
   test('displays browser local time bar', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     expect(screen.getByText(/Your Browser Local Time/i)).toBeInTheDocument();
   });
 
   test('renders default timezones (New York, London, New Delhi)', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     expect(screen.getAllByText(/New York/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/London/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/New Delhi/i).length).toBeGreaterThan(0);
   });
 
   test('renders Add Timezone button', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     const addButton = screen.getByText(/Add Timezone/i);
     expect(addButton).toBeInTheDocument();
   });
 
   test('opens timezone search dialog when Add Timezone is clicked', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     const addButton = screen.getByText(/Add Timezone/i);
     fireEvent.click(addButton);
     
@@ -47,7 +51,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('filters timezones by search query', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     const addButton = screen.getByText(/Add Timezone/i);
     fireEvent.click(addButton);
     
@@ -60,7 +64,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('adds timezone when selected', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     const addButton = screen.getByText(/Add Timezone/i);
     fireEvent.click(addButton);
     
@@ -76,18 +80,18 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('displays timezone offset badges', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     expect(screen.getAllByText(/Offset:/i)).toHaveLength(3);
   });
 
   test('renders copy buttons for time and date', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     const copyButtons = screen.getAllByText(/Time|Date/i);
     expect(copyButtons.length).toBeGreaterThan(0);
   });
 
   test('renders Quick City Access section', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     expect(screen.getByText(/Quick City Access/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Seoul$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^San Francisco$/i })).toBeInTheDocument();
@@ -95,7 +99,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('quick city access toggles a city on and off', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
 
     expect(screen.queryByText(/\(Tokyo\)/i)).not.toBeInTheDocument();
 
@@ -113,7 +117,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('quick city selection adds a separate city card for the same timezone offset', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
 
     expect(screen.getByText(/\(New York\)/i)).toBeInTheDocument();
 
@@ -137,7 +141,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
       return 0;
     };
 
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
 
     const tokyoButton = screen.getByRole('button', { name: /^Tokyo$/i });
     const rectMock = jest.fn()
@@ -156,7 +160,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('renders favorite button for each timezone', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     const favoriteButtons = screen.getAllByRole('button').filter(btn => 
       btn.querySelector('svg')
     );
@@ -164,7 +168,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('updates favorites in localStorage', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     
     const allHeartButtons = screen.getAllByRole('button').filter(btn => {
       const svg = btn.querySelector('svg');
@@ -175,19 +179,19 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('displays correct number of timezone cards', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     const cards = screen.getAllByText(/Offset:/i);
     expect(cards).toHaveLength(3); // Default: NY, London, Delhi
   });
 
   test('renders footer text', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     expect(screen.getByText(/Enhanced timezone converter/i)).toBeInTheDocument();
     expect(screen.getByText(/100% Client-Side/i)).toBeInTheDocument();
   });
 
   test('opens converter view and shows conversion panels', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     fireEvent.click(screen.getByRole('tab', { name: /Converter/i }));
 
     await waitFor(() => {
@@ -198,7 +202,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('opens meeting planner and renders participant rows', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     fireEvent.click(screen.getByRole('tab', { name: /Meeting Planner/i }));
 
     await waitFor(() => {
@@ -208,7 +212,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('opens best slots view', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     fireEvent.click(screen.getByRole('tab', { name: /Best Slots/i }));
 
     await waitFor(() => {
@@ -217,7 +221,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('shows ICS export button in meeting planner', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     fireEvent.click(screen.getByRole('tab', { name: /Meeting Planner/i }));
 
     await waitFor(() => {
@@ -226,7 +230,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('adds a team profile member', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     fireEvent.click(screen.getByRole('tab', { name: /Meeting Planner/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /Show Advanced/i }));
@@ -241,12 +245,12 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('has share setup button for URL-based sharing', () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     expect(screen.getByRole('button', { name: /Share Setup/i })).toBeInTheDocument();
   });
 
   test('shareable URL preserves exact city selections for same-timezone cities', async () => {
-    const { unmount } = render(<TimezoneConverter />);
+    const { unmount } = renderWithRouter(<TimezoneConverter />);
 
     fireEvent.click(screen.getByRole('button', { name: /^Boston$/i }));
 
@@ -258,7 +262,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
     unmount();
     window.history.replaceState({}, '', `/${window.location.search}`);
 
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
 
     await waitFor(() => {
       expect(screen.getByText(/\(New York\)/i)).toBeInTheDocument();
@@ -270,7 +274,7 @@ describe('TimezoneConverter Component - Hardcoded Data Version', () => {
   });
 
   test('shows meeting app integration buttons', async () => {
-    render(<TimezoneConverter />);
+    renderWithRouter(<TimezoneConverter />);
     fireEvent.click(screen.getByRole('tab', { name: /Meeting Planner/i }));
 
     await waitFor(() => {

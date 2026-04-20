@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { ArrowRight, Briefcase, CalendarPlus, Clock, Copy, Download, Heart, Link2, Moon, Plus, Search, Sparkles, Star, Sun, Trash2, Users, X } from 'lucide-react';
+import { ArrowRight, Briefcase, CalendarPlus, Clock, Copy, Download, Heart, Home, Link2, Moon, Plus, Search, Sparkles, Star, Sun, Trash2, Users, X } from 'lucide-react';
 import { TIMEZONE_DATA, MAJOR_CITIES } from '../data/timezoneData';
 
 // ============================================================================
@@ -260,6 +261,7 @@ const findOverlapSlots = (timezones, durationMinutes) => {
 // ============================================================================
 
 export default function TimezoneConverter({ theme = 'light', onToggleTheme = () => {} }) {
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState('world');
   const [isViewVisible, setIsViewVisible] = useState(false);
   const [isTopStackPinned, setIsTopStackPinned] = useState(false);
@@ -663,7 +665,16 @@ export default function TimezoneConverter({ theme = 'light', onToggleTheme = () 
 
       {/* HEADER */}
       <div className="text-center space-y-3 py-2">
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            aria-label="Go to home page"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300/80 bg-white/85 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/85 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            <Home className="h-4 w-4" />
+            Home
+          </button>
           <button
             type="button"
             onClick={onToggleTheme}

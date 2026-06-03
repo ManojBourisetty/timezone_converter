@@ -9,9 +9,6 @@ on:
       - "backend/**"
       - ".github/workflows/deploy-vercel.yml"
   workflow_dispatch:
-  schedule:
-    # Auto-retry deployment windows in case Vercel hobby quota blocked a prior push run.
-    - cron: '17 * * * *'
 
 concurrency:
   group: deploy-vercel-${{ github.ref }}
